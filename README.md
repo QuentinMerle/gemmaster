@@ -82,7 +82,6 @@ GemMaster is an evolving engine. Our next milestones include:
 
 - **🎒 Smart Inventory Integration**: Linking the inventory system directly with the `[[SKILL: VISION]]` challenges. Items you find will unlock specific multimodal visual clues.
 - **⚔️ Advanced Combat Orchestration**: Expanding the `DANGER_RULES` to manage waves of enemies and environmental hazards with deeper mechanical consequences.
-- **🎭 Multilingual Narrator Expansion**: Tuning the Organic Master prompt for even more languages and cultural nuances.
 
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
