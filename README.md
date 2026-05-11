@@ -1,45 +1,52 @@
-# 💎 GemMaster: Studio Edition
+# 💎 GemMaster: Studio-Grade Multimodal RPG
+> **Powered by Gemma 2 (4B) — Where your reality becomes the narrative.**
 
-**The Ultimate Local AI Narrative Engine, powered by Google Gemma 4.**
+GemMaster is an immersive RPG narrative engine designed for the **Gemma 4 Challenge**. It transforms the classic text-adventure into a cinematic experience, bridging the digital and physical worlds through multimodal AI vision and dynamic visual storytelling.
 
-GemMaster is a high-premium, local-first RPG narrative engine designed to transform your LLM (optimized for Gemma 4-E2B) into a sophisticated "Destiny Master". It combines high-end aesthetics with rigid technical protocols to ensure a seamless, immersive, and visually stunning role-playing experience.
+![GemMaster Interface](web/static/logo.svg) <!-- Replace with actual screenshot later -->
 
-![GemMaster UI Preview](https://github.com/user-attachments/assets/demo-placeholder.png)
+## 🌟 The "Studio-Grade" Experience
 
-## 🌟 Key Features (v1.5)
+GemMaster isn't just a chatbot; it's an **AI Director**. Built with a focus on high-end aesthetics and tactical depth, it features:
 
-### 🧠 Advanced AI Logic
-*   **Gemma 4 Optimized**: Tailored for the Gemma 4-E2B "Effective 2B" model, leveraging PLE (Per-Layer Embeddings) for ultra-precise reasoning.
-*   **Destiny Whisper**: A dedicated `<reasoning>` layer that provides omniscient sensory details and tactical analysis.
-*   **Gemma Guard**: A built-in anti-meta safety mechanism that reacts narratively to game-breaking attempts.
-*   **Hardened Parsing**: A "nuclear" regex engine that strips all technical noise for a pure narrative flow.
-
-### 🎨 Studio-Grade UI/UX
-*   **Glassmorphism Design**: A premium, frosted-glass aesthetic with dynamic "Blobs" that react to the narrative mood.
-*   **Reactive Ambilight**: The UI background shifts colors based on the `[[AMBIANCE]]` (Action, Mystery, Tension, etc.).
-*   **Fluid Transitions**: High-end Slide & Fade animations throughout the setup wizard.
-*   **Studio Typography**: Optimized for long-form reading with 1.15rem Inter/Roboto fonts.
-
-### 🛡️ Technical Excellence
-*   **Session-Lock**: Automatic LocalStorage persistence. Never lose your saga on a refresh.
-*   **GPU Optimized**: Hardware-accelerated CSS (translateZ) and throttled streaming for buttery-smooth performance.
-*   **Local-First**: 100% private. Runs on your machine via Ollama/FastAPI.
+*   **👁️ Multimodal Reality Challenges**: The AI can challenge you to "show" objects from your real world to solve in-game puzzles. Show your actual keys to open a chest or a drawing to cast a spell.
+*   **🌈 Dynamic Ambilight Immersion**: The entire UI atmosphere shifts colors and moods (Rain, Action, Tension, Mystery) based on the AI's narrative intent.
+*   **🎲 Tactical Narrative Mechanics**: Integrated stat-based dice rolls and physical Quick Time Events (QTE) that make every decision impactful.
+*   **🎭 The "Omniscient Narrator"**: A refined MJ personality (style BG3) that reasons internally about tension and pacing before weaving its tale.
 
 ## 🚀 Quick Start
 
-1.  **Install Ollama**: Ensure you have Ollama running.
-2.  **Pull Gemma 4**: `ollama pull gemma4:e2b` (or your preferred variant).
-3.  **Launch**:
-    ```bash
-    pip install -r requirements.txt
-    python main.py
-    ```
-4.  **Play**: Open `http://localhost:8000`.
+### Prerequisites
+- **Ollama** installed and running.
+- The **Gemma 2 (4B)** model pulled: `ollama pull gemma2:2b` (or 4b/9b depending on your hardware).
+- **Python 3.10+**.
 
-## 🟠 Next Steps (Sprint 3)
-*   [ ] **Loot Engine**: Procedural rewards and visual item cards.
-*   [ ] **Visions AI**: Native image analysis using Gemma 4's multimodal capabilities.
-*   [ ] **Saga Journal**: Export your story as a cinematic Markdown/PDF.
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/QuentinMerle/gemmaster.git
+   cd gemmaster
+   ```
+2. Run the installation script:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+
+### Launch
+Start the engine:
+```bash
+python main.py
+```
+Open your browser at `http://localhost:8000`.
+
+## 🛠️ Architecture
+- **AI Engine**: Custom Prompt v4 (Organic Master) optimized for Gemma 2's reasoning.
+- **Frontend**: Alpine.js for a reactive, zero-latency "Liquid Logic" design.
+- **Backend**: FastAPI with multimodal streaming support.
+
+## 🏆 Gemma 4 Challenge
+This project was built to showcase the power of the **Gemma 2** family in creating innovative, multimodal, and highly immersive gaming experiences.
 
 ---
-*Created with ❤️ for the Google Gemma 4 Challenge.*
+*Created with ❤️ for the Gemma 4 Challenge.*
