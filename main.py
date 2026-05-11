@@ -9,9 +9,30 @@ from core.prompts import PromptTemplates
 import os
 import httpx
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="GemMaster")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup check
+    print("💎 GEMMASTER: Validating Engine...")
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            response = await client.get(f"{engine.base_url}/api/tags")
+            if response.status_code == 200:
+                models = [m["name"] for m in response.json().get("models", [])]
+                if engine.model in models or any(engine.model in m for m in models):
+                    print(f"✅ Engine Online: {engine.model} is ready.")
+                else:
+                    print(f"⚠️ Warning: {engine.model} not found in Ollama. Please run: ollama pull {engine.model}")
+            else:
+                print("❌ Engine Offline: Ollama is not responding correctly.")
+    except Exception as e:
+        print(f"❌ Engine Offline: Could not connect to Ollama ({e})")
+    
+    yield
+
+app = FastAPI(title="GemMaster", lifespan=lifespan)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
@@ -38,13 +59,30 @@ def load_config():
             if "model" not in config: config["model"] = "gemma4:e4b"
             if "language" not in config: config["language"] = "fr"
             return config
-    return {"theme": "fantasy", "duration": "infinite", "tone": "heroic", "partyMode": "solo", "model": "gemma4:e4b", "language": "fr"}
+    return {"theme": "fantasy", "duration": "15min", "tone": "heroic", "partyMode": "solo", "model": "gemma4:e4b", "language": "fr"}
 
 def save_config(config):
     # Ensure current model is reflected in engine
     if "model" in config:
         engine.model = config["model"]
+    # Cleanup: remove infinite mode if it leaked in
+    if config.get("duration") == "infinite":
+        config["duration"] = "15min"
     with open(CONFIG_FILE, "w") as f: json.dump(config, f)
+
+@app.get("/engine_status")
+async def get_engine_status():
+    """Checks if Ollama is running and Gemma 4 is available."""
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            response = await client.get(f"{engine.base_url}/api/tags")
+            if response.status_code == 200:
+                models = [m["name"] for m in response.json().get("models", [])]
+                has_model = any(engine.model in m for m in models)
+                return {"status": "online" if has_model else "missing_model", "model": engine.model}
+    except:
+        pass
+    return {"status": "offline", "model": engine.model}
 
 @app.get("/ollama_models")
 async def get_ollama_models():
@@ -155,14 +193,22 @@ async def setup_game(config: Dict[str, Any]):
 
 @app.post("/select_character")
 async def select_character(character: Dict[str, Any]):
-    """Saves the selected character with base stats."""
-    # Add RPG stats if missing
+    """Saves the selected character with randomized base stats."""
+    import random
+    
+    # Generate RPG stats with a pool of 36 points (min 8, max 16)
     if "stats" not in character:
-        character["stats"] = {
-            "logic": 14,
-            "presence": 12,
-            "tactics": 10
-        }
+        stats = {"logic": 10, "presence": 10, "tactics": 10}
+        points_to_distribute = 6
+        
+        while points_to_distribute > 0:
+            stat_choice = random.choice(["logic", "presence", "tactics"])
+            if stats[stat_choice] < 16:
+                stats[stat_choice] += 1
+                points_to_distribute -= 1
+        
+        character["stats"] = stats
+        
     character.update({"hp": 20, "max_hp": 20, "inventory": ["Starting Gear"], "status": "Active"})
     party = parser.read_json_from_md(CHARACTERS_FILE, "## 🛡️ Adventurers")
     if not isinstance(party, list): party = []
@@ -234,6 +280,25 @@ async def chat(request: Request):
     agendas = parser.read_agendas(JOURNAL_FILE)
     config = load_config()
 
+    # Determine max turns based on duration config (e.g. "10min" -> 10 turns)
+    try:
+        max_turns = int(''.join(filter(str.isdigit, config.get("duration", "15"))))
+    except ValueError:
+        max_turns = 15
+
+    # Memory Compression Trigger (at 80%)
+    # In a real system, we would trigger an async summarization here
+    # For now, we rely on the parser to limit `journal_context` to last 10 entries
+
+    # Prompt Injections (Invisible to UI, sent to LLM)
+    reminder = "\n\n[SYSTEM REMINDER: You MUST conclude your response with the [[OPTIONS: Icon|Label|Action, ...]] tag containing exactly 3 distinct choices. Do not overuse [[CHECK]]; remember to use [[SKILL: QTE]] or [[SKILL: VISION]] when appropriate.]"
+    
+    if turn_count >= max_turns - 1:
+        wrap_up = "\n\n[CRITICAL DIRECTIVE: This is the FINAL TURN of the session. You MUST conclude the main narrative arc NOW in an epic and definitive manner. The options provided must lead to final outcomes.]"
+        user_input += wrap_up
+    else:
+        user_input += reminder
+
     system_prompt = prompts.get_system_prompt(config, universe, party, journal_context, agendas, turn_count)
 
     async def stream_response():
@@ -273,7 +338,7 @@ async def reset_game():
             json.dump([], f)
             
     # Reset Config
-    default_config = {"theme": "fantasy", "duration": "infinite", "tone": "heroic", "partyMode": "solo"}
+    default_config = {"theme": "fantasy", "duration": "15min", "tone": "heroic", "partyMode": "solo"}
     save_config(default_config)
     
     return {"status": "success"}

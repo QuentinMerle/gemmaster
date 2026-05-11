@@ -48,20 +48,23 @@ Unlike static RPGs, GemMaster uses a non-linear **Peril Gauge (0-100%)**.
 - **Mechanical Impact**: At **75% Danger**, the engine automatically injects a `-2 penalty` to all player `CHECK` rolls, simulating stress and exhaustion.
 - **Narrative Pacing**: The AI Director uses this gauge to trigger "Point of No Return" events without relying on binary "Game Over" screens.
 
-### ⏱️ Time-Safety Pacing
+### ⏱️ Time-Safety & Prompt Injection (The LLM Shepherd)
 The engine calculates a `turns_restants` variable at each step. 
-- It prevents **Mechanical Overflow**: The AI won't trigger a 4-turn combat sequence if the session duration only has 2 turns left.
-- It forces **Narrative Compression**: As the clock ticks down, the AI is instructed to move from *Escalation* to *Climax* logic.
+- **Mechanical Overflow Prevention**: The AI won't trigger a 4-turn combat sequence if the session duration only has 2 turns left.
+- **Silent Prompt Injection**: To keep smaller models (like a 4B) on track, the engine silently injects a reminder at the end of every user message: `[SYSTEM REMINDER: You MUST conclude your response with the [[OPTIONS:...]]]`.
+- **Forced Narrative Climax**: At `max_turns - 1`, the engine injects a strict `[CRITICAL DIRECTIVE]` to force the LLM to wrap up the story organically, preventing endless rambling.
 
-### 🎲 Stat-Based Resolution (Example)
-GemMaster bridges LLM text with deterministic game logic. When the AI generates a `[[CHECK: Stat, DC]]` tag, the frontend calculates the outcome using the hero's real statistics:
+### 🎲 Stat-Based Resolution & Anti-Flicker UI
+GemMaster bridges LLM text with deterministic game logic. When the AI generates a `[[CHECK: Stat, DC]]` tag, the frontend calculates the outcome using the hero's real, randomly generated statistics (pool of 36 points).
+
+To provide a true "Studio" feel, the UI includes a **real-time streaming parser** that detects partial tags (e.g., `[[CHECK:`) and replaces them with a pulsing "CALCUL DU DESTIN..." placeholder. This entirely eliminates text flickering during LLM generation.
 
 ```javascript
 // Example of the deterministic resolution logic in utils.js
-const bonus = party.stats[statName] || 0;
-const roll = Math.floor(Math.random() * 20) + 1;
-const total = roll + bonus;
-const success = total >= dc;
+const stableSeed = `dice_${offset}_${stat.trim()}`;
+// Hash the seed to ensure the dice roll remains identical on every re-render
+const roll = (Math.abs(hash) % 20) + 1;
+const success = (roll + statBonus) >= dc;
 
 return {
     label: `${statName} Check (DC ${dc})`,
@@ -83,7 +86,11 @@ GemMaster is an evolving engine. Our next milestones include:
 - **🎒 Smart Inventory Integration**: Linking the inventory system directly with the `[[SKILL: VISION]]` challenges. Items you find will unlock specific multimodal visual clues.
 - **⚔️ Advanced Combat Orchestration**: Expanding the `DANGER_RULES` to manage waves of enemies and environmental hazards with deeper mechanical consequences.
 
+## 🔮 Ideas for Later: "Twitch Plays GemMaster"
+The engine's architecture is perfectly suited for live streaming interactivity:
+- **Live Voting**: The 3 `[[OPTIONS]]` become live progress bars fueled by Twitch chat commands (`!1`, `!2`, `!3`).
+- **Chaos Interrupts**: If enough viewers spam `!attack` or `!flee`, it forces an immediate `[INTERRUPT]` on the streamer, demanding a sudden QTE or dice roll to survive the chat's chaotic whim.
+- **Lore Integration**: The AI Director becomes aware of "Les Voix du Vide" (The Voices of the Void), addressing the Twitch chat directly in its narrative reasoning.
+
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
-
-

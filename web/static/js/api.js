@@ -64,6 +64,11 @@ const API = {
     async fetchModels() {
         const res = await fetch('/ollama_models');
         return res.json();
+    },
+
+    async getEngineStatus() {
+        const res = await fetch('/engine_status');
+        return res.json();
     }
 };
 

@@ -1,1 +1,1 @@
-{"theme": "fantasy", "duration": "infinite", "tone": "heroic", "partyMode": "solo"}
+{"theme": "fantasy", "tone": "grimdark", "duration": "10min", "partyMode": "sidekick", "model": "gemma4:e4b", "language": "fr"}

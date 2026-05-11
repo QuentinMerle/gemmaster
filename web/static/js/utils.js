@@ -53,24 +53,39 @@ const Utils = {
         }
 
         if (cleanNarrative) {
+            // 1. Masquer les tags en cours de frappe AVANT le rendu Markdown (Anti-Flicker/Anti-Pop)
+            // Le lookahead `(?![^]*\]\])` s'assure qu'on ne matche qu'un tag CHECK non fermé.
+            const partialDiceRegex = /\[{2}CHECK:(?![^]*\]\])[^]*$/gi;
+            cleanNarrative = cleanNarrative.replace(partialDiceRegex, () => {
+                return `
+                <div class="tactical-dice-card" style="opacity: 0.5; justify-content: center; min-height: 80px; margin-top: 15px; margin-bottom: 15px;">
+                    <span style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--accent-purple);">
+                        <div class="dot-pulse"><span></span><span></span><span></span></div>
+                        CALCUL DU DESTIN...
+                    </span>
+                </div>`;
+            });
+
             // Render Markdown first
             let renderedNarrative = window.marked ? window.marked.parse(cleanNarrative) : cleanNarrative;
 
             // 4. RENDU DES COMPOSANTS TACTIQUES (Sur l'HTML généré)
             
-            // Jets de dés
+            // Jets de dés (Fix Clignotement: Seed basée sur la position immuable)
             const diceRegex = /\[{2}CHECK:\s*(.*?),\s*(.*?)\]{2}/gi;
-            renderedNarrative = renderedNarrative.replace(diceRegex, (match, stat, dc) => {
-                // Rendre le jet déterministe pour éviter le clignotement pendant le stream
-                const seed = stat + dc;
+            renderedNarrative = renderedNarrative.replace(diceRegex, (match, stat, dc, offset) => {
+                const isComplete = match.endsWith(']]');
+                if (!isComplete) return match; 
+
+                // Seed stable basée sur l'offset (position dans le texte) + contenu
+                const stableSeed = `dice_${offset}_${stat.trim()}`;
                 let hash = 0;
-                for (let i = 0; i < seed.length; i++) {
-                    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+                for (let i = 0; i < stableSeed.length; i++) {
+                    hash = ((hash << 5) - hash) + stableSeed.charCodeAt(i);
                     hash |= 0;
                 }
-                const roll = (Math.abs(hash) % 20) + 1;
                 
-                // Récupérer le bonus du personnage (Stats réelles)
+                const roll = (Math.abs(hash) % 20) + 1;
                 let statBonus = 0;
                 const statKey = stat.toLowerCase().trim();
                 const hero = party && party.length > 0 ? party[0] : null;
@@ -79,22 +94,22 @@ const Utils = {
                 }
 
                 const total = roll + statBonus;
-                const cleanDC = dc.replace(/DC/gi, '').trim();
-                const targetDC = parseInt(cleanDC) || 12;
+                const targetDC = parseInt(dc.replace(/DC/gi, '').trim());
+                if (isNaN(targetDC)) return match;
                 const success = total >= targetDC; 
 
                 return `
-                <div class="tactical-dice-card ${success ? 'success' : 'failure'}">
+                <div class="tactical-dice-card ${success ? 'success' : 'failure'} animate-in">
                     <div class="dice-side">
                         <div class="dice-number">${total}</div>
                         <div class="dice-label">TOTAL</div>
                     </div>
                     <div class="dice-content">
                         <div class="dice-header">
-                            <span class="dice-stat">${stat.toUpperCase()} CHECK</span>
-                            <span class="dice-dc">DC ${cleanDC}</span>
+                            <span class="dice-stat">${stat.trim().toUpperCase()} CHECK</span>
+                            <span class="dice-dc">DC ${targetDC}</span>
                         </div>
-                        <div class="dice-math">Dé (${roll}) + ${stat} (${statBonus})</div>
+                        <div class="dice-math">Dé (${roll}) + ${stat.trim()} (${statBonus})</div>
                         <div class="dice-status-badge">${success ? 'SUCCESS' : 'FAILURE'}</div>
                     </div>
                 </div>`;

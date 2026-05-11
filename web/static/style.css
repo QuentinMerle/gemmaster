@@ -30,21 +30,35 @@
     --blob-opacity: 0.3;
 }
 
+/* Enable smooth color transitions for CSS variables */
+@property --blob-1-color {
+  syntax: '<color>';
+  initial-value: #3372f5;
+  inherits: true;
+}
+
+@property --blob-2-color {
+  syntax: '<color>';
+  initial-value: #3372f5;
+  inherits: true;
+}
+
 /* Light Mode Overrides */
 .light-theme {
-    --void: #f1f5f9;
-    --glass: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(51, 114, 245, 0.1);
-    --text-main: #1e293b;
-    --text-muted: #64748b;
+    --void: #f8fafc;
+    --glass: rgba(255, 255, 255, 0.85); /* More opaque for contrast */
+    --glass-border: rgba(51, 114, 245, 0.2);
+    --text-main: #0f172a; /* Darker slate for better contrast */
+    --text-muted: #475569;
     --paper: #ffffff;
-    --shadow-premium: 0 10px 30px rgba(51, 114, 245, 0.1);
+    --shadow-premium: 0 10px 30px rgba(51, 114, 245, 0.15);
 
     /* Adapt Blobs for Light Mode */
     --blob-1-color: #93c5fd;
     --blob-2-color: #c084fc;
-    --blob-opacity: 0.15;
+    --blob-opacity: 0.1; /* Slightly lower to not overpower text */
 }
+
 
 * {
     margin: 0;
@@ -159,6 +173,72 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
+}
+
+.engine-status-badge {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: rgba(18, 19, 23, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    transition: all 0.4s ease;
+    z-index: 4000;
+    opacity: 0.5;
+    cursor: default;
+}
+
+.engine-status-badge:hover {
+    opacity: 1;
+    background: rgba(18, 19, 23, 0.8);
+    transform: translateY(-2px);
+}
+
+.engine-status-badge .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    box-shadow: 0 0 5px var(--text-muted);
+}
+
+.engine-status-badge.online {
+    color: var(--accent-green);
+    border-color: rgba(114, 245, 51, 0.2);
+    background: rgba(114, 245, 51, 0.05);
+}
+
+.engine-status-badge.online .status-dot {
+    background: var(--accent-green);
+    box-shadow: 0 0 10px var(--accent-green);
+    animation: statusPulse 2s infinite;
+}
+
+.engine-status-badge.offline, .engine-status-badge.missing_model {
+    color: var(--accent-orange);
+    border-color: rgba(245, 114, 51, 0.2);
+    background: rgba(245, 114, 51, 0.05);
+}
+
+.engine-status-badge.offline .status-dot, .engine-status-badge.missing_model .status-dot {
+    background: var(--accent-orange);
+    box-shadow: 0 0 10px var(--accent-orange);
+}
+
+@keyframes statusPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 .logo-icon {
@@ -3438,4 +3518,164 @@ h3,
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 180px;
+}
+
+/* --- Visual Portal (Studio Vision) --- */
+.visual-portal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.portal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+}
+
+.portal-content {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    background: var(--void);
+    border: 1px solid var(--accent-blue);
+    border-radius: 40px;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    box-shadow: 0 0 100px rgba(51, 114, 245, 0.3);
+    animation: portalIn 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes portalIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.vision-header {
+    text-align: center;
+}
+
+.vision-header h2 {
+    font-family: var(--font-header);
+    font-size: 2rem;
+    margin-top: 1rem;
+    color: white;
+}
+
+.vision-display {
+    aspect-ratio: 4/3;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px dashed var(--glass-border);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.vision-display:hover {
+    border-color: var(--accent-blue);
+    background: rgba(51, 114, 245, 0.05);
+}
+
+.vision-placeholder {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.vision-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 20px var(--accent-blue));
+}
+
+.vision-hint {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 1rem;
+    display: block;
+}
+
+.vision-manifested {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.manifested-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: manifestFade 1s ease-out;
+}
+
+@keyframes manifestFade {
+    from { filter: blur(20px) brightness(2); opacity: 0; }
+    to { filter: blur(0) brightness(1); opacity: 1; }
+}
+
+.manifest-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 45%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.1) 55%,
+        transparent 100%
+    );
+    background-size: 200% 200%;
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% -200%; }
+    100% { background-position: 200% 200%; }
+}
+
+/* Scanner Effect */
+.portal-scanner {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.scanner-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-blue);
+    box-shadow: 0 0 20px var(--accent-blue), 0 0 40px var(--accent-blue);
+    animation: scan 4s infinite linear;
+}
+
+@keyframes scan {
+    0% { top: 0; opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+
+.vision-footer {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.vision-footer button {
+    flex: 1;
 }

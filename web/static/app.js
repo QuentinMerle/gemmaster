@@ -33,7 +33,9 @@ function gameState() {
         customHero: { name: '', class: '', background: '' },
         customizing: false,
         previewImage: null,
+        visionQuest: { active: false, description: '' },
         models: [],
+        engineStatus: { status: 'checking', model: '' },
         config: { theme: 'fantasy', tone: 'heroic', duration: '15min', partyMode: 'solo', model: 'gemma4:e4b', language: 'fr' },
         
         abortController: null,
@@ -62,6 +64,12 @@ function gameState() {
                     this.config.model = this.models[0];
                 }
 
+                // Check Engine Status
+                this.engineStatus = await window.API.getEngineStatus();
+                if (this.engineStatus.status !== 'online') {
+                    console.warn("⚠️ Engine issues detected:", this.engineStatus);
+                }
+
                 // Title/Beat listeners
                 window.addEventListener('update-title', (e) => { this.storyTitle = e.detail; });
                 window.addEventListener('update-beat', (e) => { this.storyBeat = e.detail; });
@@ -88,10 +96,11 @@ function gameState() {
             await window.API.selectCharacter(char);
 
             // Auto-recruit sidekicks
-            if (this.config.partyMode === 'companions') {
+            // Auto-recruit 1 sidekick managed by AI
+            if (this.config.partyMode === 'sidekick') {
                 for (let other of this.charOptions) {
-                    if (other.name !== char.name && this.party.length < 3) {
-                        const sidekick = { ...other, hp: 20, max_hp: 20 };
+                    if (other.name !== char.name && this.party.length < 2) {
+                        const sidekick = { ...other, hp: 20, max_hp: 20, isSidekick: true };
                         this.party.push(sidekick);
                         await window.API.selectCharacter(sidekick);
                     }
@@ -99,14 +108,15 @@ function gameState() {
             }
 
             this.showSetup = false;
-            this.triggerIntro();
-        },
+            
+            // Format dynamic header: Theme | Tone | Duration
+            const configSummary = `${this.config.theme.toUpperCase()} | ${this.config.tone.toUpperCase()} | ${this.config.duration.toUpperCase()}`;
+            this.storyBeat = configSummary;
+            this.storyTitle = "Echoes of the Void"; 
 
-        async triggerIntro() {
+            // Trigger Intro Narration
             window.UI.shiftColors();
             this.isThinking = true;
-            this.storyTitle = "Echoes of the Void"; // Force initial title
-            this.storyBeat = "Prologue"; // Force initial beat
             const aiMsgDiv = window.UI.addMessage('', 'ai', null, this.party);
             const response = await window.API.chat("Gemma, describe the starting scene and introduce the quest.", []);
             await this.streamAI(response, aiMsgDiv);
@@ -115,18 +125,36 @@ function gameState() {
 
         // --- Narrative Engine ---
         async sendInterrupt(action) {
-            if (this.isThinking) return;
+            // Stop current narration if any
+            if (this.isThinking || this.isNarrating) {
+                if (this.abortController) {
+                    this.abortController.abort();
+                    console.log("🛑 Interrupting current narration...");
+                }
+            }
+
+            // Important: Preserve turn count on interrupt
+            this.turnCount++; 
+
             const interruptMsg = `[INTERRUPT: ${action}]`;
             
-            // Add a small visual feedback in the chat (optional, but good for "Studio" feel)
+            // Add visual feedback
             let label = action.replace('INTERRUPT_', '');
-            window.UI.addMessage(`*Action immédiate : ${label}*`, 'user', null, this.party);
+            window.UI.addMessage(`*Réaction immédiate : ${label}*`, 'user', null, this.party);
             
             this.isThinking = true;
+            this.isNarrating = false;
+            this.interrupts = [];
+            this.options = [];
+            this.placeholder = "Gemma is weaving your destiny...";
+            window.processedSkills = window.processedSkills || new Set();
+            window.processedSkills.clear(); // Clear to allow immediate re-triggering of tools
+            
             const aiMsgDiv = window.UI.addMessage('', 'ai', null, this.party);
             
             try {
-                const response = await window.API.chat(interruptMsg, []);
+                this.abortController = new AbortController();
+                const response = await window.API.chat(interruptMsg, [], this.turnCount, this.abortController.signal);
                 await this.streamAI(response, aiMsgDiv);
             } catch (err) {
                 console.error("Interrupt error:", err);
@@ -200,13 +228,20 @@ function gameState() {
         },
 
         processTriggers(fullText) {
-            // Ambiance / Sound
-            const ambianceMatch = fullText.match(/\[\[(AMBIANCE|SOUND):\s*(.*?)\]\]/i);
-            if (ambianceMatch && !window.processedSkills.has('AMBIANCE_' + ambianceMatch[0])) {
-                const mood = ambianceMatch[2].trim().toUpperCase();
-                window.UI.shiftColors(mood); // Reactive Ambilight!
-                window.processedSkills.add('AMBIANCE_' + ambianceMatch[0]);
-            }
+            // Ambiance / Sound (Robust matching)
+            const ambianceMatches = Array.from(fullText.matchAll(/\[\[(AMBIANCE|SOUND):\s*(.*?)\]\]/gi));
+            ambianceMatches.forEach(match => {
+                const tag = match[0];
+                const type = match[1].toUpperCase();
+                const value = match[2].trim().toUpperCase();
+                
+                if (!window.processedSkills.has(tag)) {
+                    console.log(`🎬 Triggering ${type}: ${value}`);
+                    if (type === 'AMBIANCE') window.UI.shiftColors(value);
+                    if (type === 'SOUND') console.log("🔊 Sound Trigger:", value);
+                    window.processedSkills.add(tag);
+                }
+            });
 
             // QTE
             const qteMatch = fullText.match(/\[\[SKILL: QTE,\s*(.*?),\s*(.*?)\]\]/i);
@@ -254,9 +289,11 @@ function gameState() {
 
             // VISION
             const visionMatch = fullText.match(/\[\[SKILL: VISION,\s*(.*?)\]\]/i);
-            if (visionMatch && !window.processedSkills.has(visionMatch[0])) {
+            if (visionMatch && !this.visionQuest.active && !window.processedSkills.has(visionMatch[0])) {
                 window.processedSkills.add(visionMatch[0]);
-                this.placeholder = "👁️ Vision quest: Upload a relevant image...";
+                this.visionQuest.active = true;
+                this.visionQuest.description = visionMatch[1].trim();
+                this.placeholder = "👁️ Vision quest active...";
             }
 
             // --- Interaction Tag Parsing ---
@@ -300,7 +337,7 @@ function gameState() {
             }
 
             // 2. OPTIONS (Main Narrative Choices - End of message)
-            const optMatches = Array.from(fullText.matchAll(/\*?\*?\[{1,2}OPTIONS?[:\s]*([\s\S]*?)\]{1,2}\*?\*?/gi));
+            const optMatches = Array.from(fullText.matchAll(/\*?\*?\[{1,2}OPTIONS?[:\s]*([\s\S]*?)(?:\]{1,2}|$)/gi));
             if (optMatches.length > 0) {
                 let allOpts = [];
                 optMatches.forEach(match => {
@@ -388,6 +425,12 @@ function gameState() {
         resolveQTE(success) {
             this.qte.active = false;
             this.sendMessage(`[QTE RESULT: ${success ? 'SUCCESS' : 'FAILURE'}]`);
+        },
+
+        async submitVision() {
+            if (!this.previewImage) return;
+            this.visionQuest.active = false;
+            this.sendMessage(`[VISION MANIFESTED: ${this.visionQuest.description}]`);
         },
 
         interrupt(action) {

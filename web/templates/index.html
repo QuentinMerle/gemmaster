@@ -249,6 +249,42 @@
             </div>
         </div>
 
+        <!-- Visual Portal (Vision Challenges) -->
+        <div class="visual-portal" x-show="visionQuest.active" x-transition x-cloak>
+            <div class="portal-overlay"></div>
+            <div class="portal-scanner">
+                <div class="scanner-line"></div>
+                <div class="scanner-glitch"></div>
+            </div>
+            <div class="portal-content">
+                <div class="vision-header">
+                    <span class="setup-label">Multimodal Manifestation</span>
+                    <h2 x-text="visionQuest.description"></h2>
+                </div>
+                <div class="vision-display">
+                    <template x-if="!previewImage">
+                        <div class="vision-placeholder" @click="$refs.fileInput.click()">
+                            <div class="vision-icon">👁️</div>
+                            <p>Show your reality to Gemma</p>
+                            <span class="vision-hint">Click to upload or drag & drop</span>
+                        </div>
+                    </template>
+                    <template x-if="previewImage">
+                        <div class="vision-manifested">
+                            <img :src="previewImage" class="manifested-img">
+                            <div class="manifest-shimmer"></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="vision-footer">
+                    <button @click="submitVision()" class="launch-master-btn" :disabled="!previewImage">
+                        MANIFEST REALITY
+                    </button>
+                    <button @click="visionQuest.active = false" class="btn-secondary">ABORT</button>
+                </div>
+            </div>
+        </div>
+
         <!-- QTE Overlay -->
         <div class="qte-overlay" x-show="qte.active" x-transition:enter="qte-enter" x-transition:leave="qte-leave"
             x-cloak>
@@ -351,7 +387,7 @@
                     <div class="setup-field">
                         <label class="setup-label">Session Duration</label>
                         <div class="segmented-control">
-                            <template x-for="d in ['5min', '15min', 'infinite']">
+                            <template x-for="d in ['10min', '20min', '30min']">
                                 <button class="segment-btn" :class="config.duration === d ? 'active' : ''"
                                     @click="config.duration = d" x-text="d"></button>
                             </template>
@@ -361,9 +397,9 @@
                     <div class="setup-field full-width" style="margin-top: 2rem;">
                         <label class="setup-label">Party Formation</label>
                         <div class="segmented-control">
-                            <template x-for="f in ['solo', 'companions', 'coop']">
+                            <template x-for="f in ['solo', 'sidekick']">
                                 <button class="segment-btn" :class="config.partyMode === f ? 'active' : ''"
-                                    @click="config.partyMode = f" x-text="f"></button>
+                                    @click="config.partyMode = f" x-text="f === 'solo' ? 'SOLO JOURNEY' : 'WITH SIDEKICK'"></button>
                             </template>
                         </div>
                     </div>
@@ -501,6 +537,11 @@
         </div>
     </div>
 
+    </div>
+    <!-- Engine Status Indicator (Discreet Corner) -->
+    <div class="engine-status-badge" :class="engineStatus.status" :title="`Model: ${engineStatus.model}`">
+        <div class="status-dot"></div>
+        <span x-text="engineStatus.status === 'online' ? 'Engine Ready' : (engineStatus.status === 'checking' ? 'Checking...' : 'Engine Error')"></span>
     </div>
     <!-- Thinking Toast (Top-Right) -->
     <div class="thinking-toast" x-show="isThinking" x-transition x-cloak>
