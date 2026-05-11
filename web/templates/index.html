@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemMaster | Studio</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="/static/js/utils.js" defer></script>
+    <script src="/static/js/ui_helpers.js" defer></script>
+    <script src="/static/js/api.js" defer></script>
+    <script src="/static/app.js" defer></script>
+
+    <!-- Alpine must be last to ensure gameState is defined -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body x-data="gameState()" :class="darkMode ? '' : 'light-theme'" x-init="init()"
+    @update-title.window="storyTitle = $event.detail" @update-beat.window="storyBeat = $event.detail">
+
+    <!-- RESET CONFIRMATION MODAL (At top for absolute priority) -->
+    <div class="modal-overlay" x-show="showResetConfirm" x-transition
+        :style="showResetConfirm ? 'display: flex !important;' : 'display: none !important;'" style="z-index: 9999;">
+        <div class="modal-glass danger-zone">
+            <span class="setup-label" style="color: #ef4444;">Catastrophic Event</span>
+            <h2 style="font-family: var(--font-header); font-size: 2.5rem; margin-bottom: 1rem; color: white;">Erase
+                Reality?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2.5rem; line-height: 1.6;">
+                This action will collapse the current timeline, erase your journal, and reset your hero's destiny.
+                <br>
+                <strong>This process is irreversible.</strong>
+            </p>
+
+            <div style="display: flex; gap: 1.5rem; justify-content: center;">
+                <button @click="executeReset()" class="reset-confirm-btn">YES, COLLAPSE TIMELINE</button>
+                <button @click="showResetConfirm = false" class="reset-cancel-btn">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Engine -->
+    <div class="bg-stage">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <!-- Gemini-style Fades -->
+    <div class="scrim-top"></div>
+    <div class="scrim-bottom"></div>
+
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="brand-center">
+            <img src="/static/logo.svg" alt="GemMaster" class="logo-icon">
+            <span class="logo-text">GemMaster</span>
+        </div>
+
+        <button @click="darkMode = !darkMode" class="theme-pill" :class="darkMode ? 'dark' : 'light'">
+            <div class="pill-track">
+                <div class="pill-indicator">
+                    <template x-if="darkMode">
+                        <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </template>
+                    <template x-if="!darkMode">
+                        <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </template>
+                </div>
+            </div>
+        </button>
+    </nav>
+
+    <div class="app-viewport">
+        <!-- Premium Hero Dashboard -->
+        <aside class="floating-card hero-dashboard" x-show="party.length > 0" x-transition x-cloak>
+            <div class="dashboard-header">
+                <span class="setup-label">Active Persona</span>
+            </div>
+
+            <div class="hero-list-scroll">
+                <template x-for="(hero, idx) in party">
+                    <div class="hero-unit-card"
+                        :class="{ 'leader': idx === 0, 'companion': idx > 0, 'focused': focusHero === hero.name }">
+                        <div class="hero-profile">
+                            <div class="hero-avatar-lux" x-text="hero.name ? hero.name[0] : '?'"></div>
+                            <div class="hero-info-lux">
+                                <div class="hero-name-lux" x-text="hero.name"></div>
+                                <div class="hero-class-lux" x-text="hero.class"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-group">
+                            <div class="mini-stat">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span class="stat-label">VITALITY</span>
+                                    <span class="stat-label" x-text="`${hero.hp}/${hero.max_hp}`"></span>
+                                </div>
+                                <div class="stat-progress">
+                                    <div class="stat-fill" :style="`width: ${(hero.hp/hero.max_hp)*100}%` "></div>
+                                </div>
+                            </div>
+                            <div class="mini-stat">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span class="stat-label">RESONANCE</span>
+                                    <span class="stat-label" x-text="hero.stats ? hero.stats.logic : 10"></span>
+                                </div>
+                                <div class="stat-progress">
+                                    <div class="stat-fill"
+                                        :style="`width: ${(hero.stats ? hero.stats.logic : 10) / 20 * 100}%` "></div>
+                                </div>
+                            </div>
+                            <div class="mini-stat">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span class="stat-label">TACTICAL STANCE</span>
+                                    <span class="stat-label" x-text="hero.stats ? hero.stats.tactics : 10"></span>
+                                </div>
+                                <div class="stat-progress">
+                                    <div class="stat-fill"
+                                        :style="`width: ${(hero.stats ? hero.stats.tactics : 10) / 20 * 100}%` "
+                                        style="background: var(--accent-orange);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="dashboard-footer">
+                <button @click="resetGame()" class="reset-btn-lux">
+                    <span>RESET REALITY</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content (Fullscreen Scroll) -->
+        <main class="narrative-viewport" id="main-scroll">
+            <div class="narrative-content">
+                <div class="narrative-header">
+                    <div class="header-content-lux">
+                        <span class="beat-badge-lux">
+                            <span class="pulse-dot"></span>
+                            <span x-text="storyBeat"></span>
+                        </span>
+                        <h1 class="story-title-lux" x-text="storyTitle"></h1>
+                    </div>
+                </div>
+
+                <div id="chat-history">
+                    <!-- Messages will be injected here -->
+                </div>
+
+                <!-- The "Thinking" Message (Blue Pill) -->
+                <div class="thinking-msg-container" x-show="isThinking" x-transition x-cloak>
+                    <div class="thinking-pill-lux">
+                        <div class="dot-pulse"><span></span><span></span><span></span></div>
+                        GEMMA IS WEAVING YOUR DESTINY
+                    </div>
+                </div>
+
+                <!-- Narrative Options (End of Story) -->
+                <div class="narrative-options-container" x-show="options.length > 0 && !isThinking" x-transition
+                    x-cloak>
+                    <template x-for="opt in options" :key="opt.label">
+                        <button class="option-btn-premium" @click="sendMessage(opt.action)">
+                            <span class="opt-icon" x-text="opt.icon"></span>
+                            <span class="opt-label" x-text="opt.label"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div style="height: 200px;"></div>
+            </div>
+        </main>
+
+        <!-- Unified Loader (weaving-toaster in header) -->
+
+        <!-- Gemini-Style Input Dock -->
+        <div class="input-dock">
+            <!-- Quick Actions (BG3 Style Interrupts) -->
+            <div x-show="gameStarted && heroSelected" class="interrupt-dock">
+                <!-- Global Actions (Permanent) -->
+                <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_ATTACK')">
+                    <span class="btn-icon">⚔️</span>
+                    <span class="btn-label">ATTAQUER</span>
+                </button>
+                <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_FLEE')">
+                    <span class="btn-icon">🏃</span>
+                    <span class="btn-label">FUIR</span>
+                </button>
+                <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_STEALTH')">
+                    <span class="btn-icon">👁️</span>
+                    <span class="btn-label">OBSERVER</span>
+                </button>
+
+                <!-- Dynamic Interrupts (Legacy/Optional) -->
+                <template x-for="btn in interrupts">
+                    <button class="interrupt-btn" @click="sendMessage(btn.action)">
+                        <span class="btn-icon" x-text="btn.icon"></span>
+                        <span class="btn-label" x-text="btn.label"></span>
+                    </button>
+                </template>
+            </div>
+
+            <div class="gemini-input-container">
+                <button @click="$refs.fileInput.click()" class="action-btn" :disabled="isThinking">
+                    <span>📷</span>
+                </button>
+                <button @click="showInventory = !showInventory" class="action-btn" :disabled="isThinking"
+                    title="Inventory">
+                    <span>🎒</span>
+                    <span x-show="inventory.length > 0" class="inv-badge" x-text="inventory.length"></span>
+                </button>
+                <input type="file" x-ref="fileInput" @change="handleImageUpload($event)" style="display: none;"
+                    accept="image/*">
+
+                <input type="text" id="user-input" class="chat-input" :placeholder="placeholder"
+                    @keydown.enter="sendMessage()" :disabled="isThinking">
+
+                <button @click="sendMessage()" :disabled="isThinking" class="send-trigger">
+                    <span style="font-size: 1.2rem;">↑</span>
+                </button>
+
+                <!-- Image Preview Over -->
+                <div x-show="previewImage" class="image-preview-area" x-transition>
+                    <div style="position: relative;">
+                        <img :src="previewImage" class="preview-thumb">
+                        <button @click="previewImage = null" class="preview-remove">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QTE Overlay -->
+        <div class="qte-overlay" x-show="qte.active" x-transition:enter="qte-enter" x-transition:leave="qte-leave"
+            x-cloak>
+            <div class="qte-container">
+                <div class="qte-label">REFLEX MANIFESTATION</div>
+                <div class="qte-sequence">
+                    <template x-for="(key, index) in qte.sequence">
+                        <div class="qte-key"
+                            :class="index < qte.currentIdx ? 'success' : (index === qte.currentIdx ? 'active' : '')"
+                            x-text="key.toUpperCase() === 'W' ? 'W/Z' : (key.toUpperCase() === 'A' ? 'A/Q' : key.toUpperCase())">
+                        </div>
+                    </template>
+                </div>
+                <div class="qte-timer-bar">
+                    <div class="qte-timer-fill" :style="`width: ${(qte.timer / qte.maxTimer) * 100}%` "></div>
+                </div>
+                <div class="qte-hint">STRIKE THE KEYS BEFORE THE VOID CONSUMES YOU</div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div class="inventory-drawer" :class="showInventory ? 'open' : ''" x-cloak>
+            <div class="drawer-header">
+                <span class="setup-label">Backpack</span>
+                <button @click="showInventory = false" class="close-drawer">✕</button>
+            </div>
+            <div class="drawer-content">
+                <template x-if="inventory.length === 0">
+                    <div class="empty-inv">Your backpack is empty...</div>
+                </template>
+                <div class="item-grid">
+                    <template x-for="item in inventory">
+                        <div class="item-card" @click="useItem(item)">
+                            <div class="item-preview">
+                                <img :src="item.image" :alt="item.name">
+                            </div>
+                            <div class="item-name" x-text="item.name"></div>
+                            <div class="item-action">USE</div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETUP MODAL -->
+    <div class="modal-overlay" x-show="showSetup" x-transition>
+        <div class="modal-glass">
+            <span class="setup-label">Configuration</span>
+            <h2 style="font-family: var(--font-header); font-size: 2.5rem; margin-bottom: 1rem;">Initialize World</h2>
+
+            <div class="wizard-progress">
+                <div class="progress-track">
+                    <div class="progress-fill" :style="'width: ' + (((wizardStep - 1) / 3) * 100) + '%'"></div>
+                </div>
+                <div class="step-indicators">
+                    <span :class="wizardStep >= 1 ? 'active' : ''">1</span>
+                    <span :class="wizardStep >= 2 ? 'active' : ''">2</span>
+                    <span :class="wizardStep >= 3 ? 'active' : ''">3</span>
+                    <span :class="wizardStep >= 4 ? 'active' : ''">4</span>
+                </div>
+            </div>
+
+            <div class="setup-sections">
+                <!-- STEP 1: THE WORLD -->
+                <div x-show="wizardStep === 1" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
+                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
+                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                    class="wizard-step-content">
+                    <div class="setup-field full-width">
+                        <label class="setup-label">World Theme</label>
+                        <div class="theme-grid">
+                            <template x-for="t in ['fantasy', 'western', 'cyberpunk', 'moderne']">
+                                <div class="theme-tile" :class="config.theme === t ? 'active' : ''"
+                                    @click="config.theme = t">
+                                    <span class="theme-icon"
+                                        x-text="t === 'fantasy' ? '🧙' : (t === 'western' ? '🤠' : (t === 'cyberpunk' ? '🤖' : '🕶️'))"></span>
+                                    <span class="theme-name" x-text="t.charAt(0).toUpperCase() + t.slice(1)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="setup-field">
+                        <label class="setup-label">Narrative Tone</label>
+                        <div class="segmented-control">
+                            <template x-for="t in ['heroic', 'grimdark', 'absurdist']">
+                                <button class="segment-btn" :class="config.tone === t ? 'active' : ''"
+                                    @click="config.tone = t" x-text="t"></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: THE GAMEPLAY -->
+                <div x-show="wizardStep === 2" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
+                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
+                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                    class="wizard-step-content">
+                    <div class="setup-field">
+                        <label class="setup-label">Session Duration</label>
+                        <div class="segmented-control">
+                            <template x-for="d in ['5min', '15min', 'infinite']">
+                                <button class="segment-btn" :class="config.duration === d ? 'active' : ''"
+                                    @click="config.duration = d" x-text="d"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="setup-field full-width" style="margin-top: 2rem;">
+                        <label class="setup-label">Party Formation</label>
+                        <div class="segmented-control">
+                            <template x-for="f in ['solo', 'companions', 'coop']">
+                                <button class="segment-btn" :class="config.partyMode === f ? 'active' : ''"
+                                    @click="config.partyMode = f" x-text="f"></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: THE ENGINE -->
+                <div x-show="wizardStep === 3" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
+                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
+                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                    class="wizard-step-content">
+                    <div class="setup-row">
+                        <div class="setup-field">
+                            <label class="setup-label">Story Language</label>
+                            <div class="segmented-control">
+                                <template x-for="l in ['fr', 'en']">
+                                    <button class="segment-btn" :class="config.language === l ? 'active' : ''"
+                                        @click="config.language = l"
+                                        x-text="l === 'fr' ? '🇫🇷 FRENCH' : '🇺🇸 ENGLISH'"></button>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="setup-field">
+                            <label class="setup-label">AI Engine Model</label>
+                            <select x-model="config.model" class="setup-input select-lux">
+                                <template x-for="m in models">
+                                    <option :value="m" x-text="m"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: RECRUITMENT -->
+                <div x-show="wizardStep === 4" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
+                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
+                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                    class="wizard-step-content">
+                    <div x-show="!customizing" class="carousel-container">
+                        <div class="hero-carousel">
+                            <!-- Custom Hero Option -->
+                            <div class="recruitment-card" @click="customizing = true"
+                                style="border-style: dashed; border-color: var(--accent-blue); opacity: 0.8; justify-content: center; align-items: center; text-align: center;">
+                                <div class="hero-avatar-lux"
+                                    style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); margin-bottom: 1rem;">
+                                    ✍️</div>
+                                <div class="card-name" style="color: var(--accent-blue);">Custom Hero</div>
+                                <div class="card-archetype" style="color: var(--text-muted); margin-top: 0.5rem;">Weave
+                                    your own path</div>
+                            </div>
+
+                            <!-- Skeleton -->
+                            <template x-if="charOptions.length === 0">
+                                <div class="recruitment-card skeleton-card">
+                                    <div class="card-header">
+                                        <div class="hero-avatar-lux skeleton-circle"></div>
+                                        <div class="header-meta">
+                                            <div class="skeleton-line title"></div>
+                                            <div class="skeleton-line subtitle"></div>
+                                        </div>
+                                    </div>
+                                    <div class="card-bio">
+                                        <div class="skeleton-line block"></div>
+                                        <div class="skeleton-line block short"></div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <template x-for="char in charOptions">
+                                <div class="recruitment-card" @click="selectCharacter(char)">
+                                    <div class="card-header">
+                                        <div class="hero-avatar-lux" x-text="char.name[0]"></div>
+                                        <div class="header-meta">
+                                            <div class="card-name" x-text="char.name"></div>
+                                            <div class="card-archetype" x-text="char.class"></div>
+                                        </div>
+                                    </div>
+                                    <div class="card-bio" x-text="char.background"></div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Custom Hero Form -->
+                    <div x-show="customizing" x-transition style="text-align: left;">
+                        <div class="setup-grid">
+                            <div class="setup-field">
+                                <label class="setup-label">Name</label>
+                                <input type="text" x-model="customHero.name" class="setup-input"
+                                    placeholder="e.g. Elara">
+                            </div>
+                            <div class="setup-field">
+                                <label class="setup-label">Archetype</label>
+                                <input type="text" x-model="customHero.class" class="setup-input"
+                                    placeholder="e.g. Shadow Weaver">
+                            </div>
+                            <div class="setup-field" style="grid-column: span 2;">
+                                <label class="setup-label">Narrative Background</label>
+                                <textarea x-model="customHero.background" class="setup-input"
+                                    style="height: 100px; resize: none;"
+                                    placeholder="Describe your origin..."></textarea>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                            <button @click="customizing = false" class="btn-secondary">CANCEL</button>
+                            <button @click="selectCharacter(customHero)" class="launch-master-btn"
+                                :disabled="loadingSetup" style="width: auto; padding: 0.8rem 2rem;">
+                                <template x-if="!loadingSetup"><span>RECRUIT</span></template>
+                                <template x-if="loadingSetup">
+                                    <span style="display: flex; align-items: center; justify-content: center;">
+                                        <div class="dot-pulse"><span></span><span></span><span></span></div>
+                                        RECRUITING...
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-footer" style="margin-top: 3rem; flex-direction: row; justify-content: space-between;">
+                <button x-show="wizardStep > 1 && wizardStep < 4" @click="wizardStep--"
+                    class="btn-secondary">BACK</button>
+                <div style="flex: 1;"></div>
+                <button x-show="wizardStep < 3" @click="wizardStep++" class="launch-master-btn"
+                    style="width: auto; padding: 1rem 3rem;">NEXT</button>
+                <button x-show="wizardStep === 3" @click="generateHeroes()" class="launch-master-btn"
+                    :disabled="loadingSetup" style="width: auto; padding: 1rem 3rem;">
+                    <span x-show="!loadingSetup">GENERATE HEROES</span>
+                    <span x-show="loadingSetup" style="display: flex; align-items: center; justify-content: center;">
+                        <div class="dot-pulse"><span></span><span></span><span></span></div>
+                        WEAVING DESTINY
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    <!-- Thinking Toast (Top-Right) -->
+    <div class="thinking-toast" x-show="isThinking" x-transition x-cloak>
+        <div class="toast-content">
+            <div class="pulse-dot"></div>
+            <span class="toast-text">WEAVING NARRATIVE...</span>
+        </div>
+    </div>
+</body>
+
+</html>

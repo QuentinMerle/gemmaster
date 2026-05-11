@@ -1,0 +1,7 @@
+# 👥 Characters
+
+## 🛡️ Adventurers
+
+```json
+[]
+```

@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# --- Web & Node ---
+node_modules/
+.npm
+dist/
+
+# --- Project Notes & Planning (Excluded for Repo) ---
+Gemma4Challenge_Article.md
+DESIGN.md
+InitialPrompt.md
+PLAN.md
+RECETTE.md
+SESSION_HANDOVER.md
+TESTS.md
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs & Temp ---
+*.log
+tmp/
+temp/
+.pytest_cache/
+
+# --- Game Data (Local Sessions) ---
+campaign/journal.md
+session_data/
+*.db
+*.sqlite3

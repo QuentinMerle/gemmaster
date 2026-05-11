@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+httpx
+jinja2
+rich
+python-frontmatter
