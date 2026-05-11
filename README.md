@@ -40,26 +40,43 @@ python main.py
 ```
 Open your browser at `http://0.0.0.0:8000`.
 
-## 🛠️ Technical Deep Dive
+## ⚙️ The Engine: Under the Hood
 
-### 🧠 Multimodal Orchestration
-GemMaster leverages the **Gemma 4 (e4b)** model to process both high-density narrative text and visual inputs. The engine uses a custom **Organic Master** prompt architecture that forces the model to reason internally about pacing and "Reality Challenges" before generating the player-facing response.
+### 🌡️ Dynamic Danger Logic (`DANGER_RULES`)
+Unlike static RPGs, GemMaster uses a non-linear **Peril Gauge (0-100%)**. 
+- It tracks the environmental and narrative tension.
+- **Mechanical Impact**: At **75% Danger**, the engine automatically injects a `-2 penalty` to all player `CHECK` rolls, simulating stress and exhaustion.
+- **Narrative Pacing**: The AI Director uses this gauge to trigger "Point of No Return" events without relying on binary "Game Over" screens.
 
-### 🎨 Liquid Logic UI System
-The interface is built on a custom design system called **Liquid Logic**:
-- **GPU Accelerated Rendering**: CSS filters and backdrops are optimized to run at 60fps even during complex narrative shifts.
-- **Ambilight System**: A dedicated UI controller that monitors AI tags to shift the entire DOM's color palette and luminosity in real-time.
-- **Glassmorphism**: High-premium frosted glass effects using `backdrop-filter` and layered translucency.
+### ⏱️ Time-Safety Pacing
+The engine calculates a `turns_restants` variable at each step. 
+- It prevents **Mechanical Overflow**: The AI won't trigger a 4-turn combat sequence if the session duration only has 2 turns left.
+- It forces **Narrative Compression**: As the clock ticks down, the AI is instructed to move from *Escalation* to *Climax* logic.
 
-### ⚙️ Tactical Parser & Rendering
-Every AI response passes through a high-performance **Tactical Parser**:
-- **Tag-to-Component Mapping**: Uses sophisticated RegEx to identify canonical tags (`[[CHECK]]`, `[[SKILL]]`, `[[NPC]]`) and injects them as reactive Alpine.js components.
-- **Seeded Determinism**: Dice rolls and QTE sequences are seeded by the AI's tag content to ensure visual stability during the streaming process.
+### 🎲 Stat-Based Resolution (Example)
+GemMaster bridges LLM text with deterministic game logic. When the AI generates a `[[CHECK: Stat, DC]]` tag, the frontend calculates the outcome using the hero's real statistics:
 
-### ⚡ Zero-Overhead Reactivity
-- **Alpine.js**: Chosen for its minimal footprint, managing the entire game state (Danger Level, Inventory, Turn Count) without the weight of a traditional framework.
-- **Streaming Architecture**: Real-time narrative delivery using FastAPI's streaming response for an instant, "living" text experience.
+```javascript
+// Example of the deterministic resolution logic in utils.js
+const bonus = party.stats[statName] || 0;
+const roll = Math.floor(Math.random() * 20) + 1;
+const total = roll + bonus;
+const success = total >= dc;
+
+return {
+    label: `${statName} Check (DC ${dc})`,
+    result: `${roll} + ${bonus} = ${total}`,
+    status: success ? 'SUCCESS' : 'FAILURE'
+};
+```
+
+### 🎭 Organic Reasoning (The Voice of Fate)
+The `<reasoning>` block acts as the **AI Director's internal monologue**. It is instructed to use an omniscient, fatalistic prose to:
+1. Analyze the current narrative tension.
+2. Verify mechanical constraints (Danger level, turn count).
+3. Plan the next "Reality Challenge" before outputting a single word to the player.
 
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
+
 
