@@ -76,6 +76,15 @@ The `<reasoning>` block acts as the **AI Director's internal monologue**. It is 
 2. Verify mechanical constraints (Danger level, turn count).
 3. Plan the next "Reality Challenge" before outputting a single word to the player.
 
+## 🗺️ Roadmap: The Quest Ahead
+
+GemMaster is an evolving engine. Our next milestones include:
+
+- **🎒 Smart Inventory Integration**: Linking the inventory system directly with the `[[SKILL: VISION]]` challenges. Items you find will unlock specific multimodal visual clues.
+- **🎵 Adaptive Audio Synthesis**: Implementing a dynamic soundscape engine that synchronizes audio-textures (Rain, Battle, Mystery) with the Ambilight color shifts.
+- **⚔️ Advanced Combat Orchestration**: Expanding the `DANGER_RULES` to manage waves of enemies and environmental hazards with deeper mechanical consequences.
+- **🎭 Multilingual Narrator Expansion**: Tuning the Organic Master prompt for even more languages and cultural nuances.
+
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
 
