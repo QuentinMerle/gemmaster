@@ -40,13 +40,26 @@ python main.py
 ```
 Open your browser at `http://0.0.0.0:8000`.
 
-## 🛠️ Architecture
-- **AI Engine**: Custom Prompt v4 (Organic Master) optimized for Gemma 4's reasoning.
-- **Frontend**: Alpine.js for a reactive, zero-latency "Liquid Logic" design.
-- **Backend**: FastAPI with multimodal streaming support.
+## 🛠️ Technical Deep Dive
 
-## 🏆 Gemma 4 Challenge
-This project was built to showcase the power of the **Gemma 4** family in creating innovative, multimodal, and highly immersive gaming experiences.
+### 🧠 Multimodal Orchestration
+GemMaster leverages the **Gemma 4 (e4b)** model to process both high-density narrative text and visual inputs. The engine uses a custom **Organic Master** prompt architecture that forces the model to reason internally about pacing and "Reality Challenges" before generating the player-facing response.
+
+### 🎨 Liquid Logic UI System
+The interface is built on a custom design system called **Liquid Logic**:
+- **GPU Accelerated Rendering**: CSS filters and backdrops are optimized to run at 60fps even during complex narrative shifts.
+- **Ambilight System**: A dedicated UI controller that monitors AI tags to shift the entire DOM's color palette and luminosity in real-time.
+- **Glassmorphism**: High-premium frosted glass effects using `backdrop-filter` and layered translucency.
+
+### ⚙️ Tactical Parser & Rendering
+Every AI response passes through a high-performance **Tactical Parser**:
+- **Tag-to-Component Mapping**: Uses sophisticated RegEx to identify canonical tags (`[[CHECK]]`, `[[SKILL]]`, `[[NPC]]`) and injects them as reactive Alpine.js components.
+- **Seeded Determinism**: Dice rolls and QTE sequences are seeded by the AI's tag content to ensure visual stability during the streaming process.
+
+### ⚡ Zero-Overhead Reactivity
+- **Alpine.js**: Chosen for its minimal footprint, managing the entire game state (Danger Level, Inventory, Turn Count) without the weight of a traditional framework.
+- **Streaming Architecture**: Real-time narrative delivery using FastAPI's streaming response for an instant, "living" text experience.
 
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
+
