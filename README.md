@@ -81,7 +81,6 @@ The `<reasoning>` block acts as the **AI Director's internal monologue**. It is 
 GemMaster is an evolving engine. Our next milestones include:
 
 - **🎒 Smart Inventory Integration**: Linking the inventory system directly with the `[[SKILL: VISION]]` challenges. Items you find will unlock specific multimodal visual clues.
-- **🎵 Adaptive Audio Synthesis**: Implementing a dynamic soundscape engine that synchronizes audio-textures (Rain, Battle, Mystery) with the Ambilight color shifts.
 - **⚔️ Advanced Combat Orchestration**: Expanding the `DANGER_RULES` to manage waves of enemies and environmental hazards with deeper mechanical consequences.
 - **🎭 Multilingual Narrator Expansion**: Tuning the Organic Master prompt for even more languages and cultural nuances.
 
