@@ -38,7 +38,7 @@ Start the engine:
 ```bash
 python main.py
 ```
-Open your browser at `http://localhost:8000`.
+Open your browser at `http://0.0.0.0:8000`.
 
 ## 🛠️ Architecture
 - **AI Engine**: Custom Prompt v4 (Organic Master) optimized for Gemma 4's reasoning.
