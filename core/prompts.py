@@ -1,5 +1,5 @@
 # PROMPTS.PY - The Soul of the Machine
-# Gemini Studio Edition — v3 (Balanced)
+# Gemini Immersive Edition — v3 (Balanced)
 
 # ============================================================
 # CANONICAL TAG REGISTRY (source unique de vérité)
@@ -15,7 +15,8 @@ CANONICAL_TAGS = """
 [[DANGER: +/-X]]               → Ajuste la jauge de danger (0-100%).
 [[AMBIANCE: MOOD]]             → ACTION | MYSTERY | TENSION | RAIN | CALM | DANGER
 [[OPTIONS: Icon|Label|Action, ...]]    → Exactement 3. Toujours en FIN de réponse.
-# [[INTERRUPTS]] → Géré par le FRONTEND. Le LLM ne génère plus ce tag.
+<voiceover>Phrase</voiceover>  → Commentaire omniscient TRÈS COURT (1 phrase). Toujours au DÉBUT.
+<reasoning>Plan</reasoning>    → Tes pensées secrètes et calculs techniques.
 """
 
 # ============================================================
@@ -177,6 +178,8 @@ INTERDICTIONS ABSOLUES :
 4. Jamais varier la casse des noms de tags.
 5. Jamais inventer de tags ou sous-types.
 6. Jamais inventer de noms de fichiers image hors du REGISTRE.
+7. **INTERDIT : Ne mentionne JAMAIS de résultats numériques (ex: 'Tu as fait un 14') ou de labels de réussite/échec dans ta NARRATION. Le moteur s'en charge.**
+8. **RÈGLE D'ARRÊT : Dès que tu insères un tag [[CHECK]] ou [[SKILL]], tu DOIS arrêter ta NARRATION immédiatement après. Ne narre pas la conséquence du jet, attends le tour suivant.**
 """
 
 
@@ -240,17 +243,16 @@ class PromptTemplates:
         # ── Instruction de langue (rédigée dans la langue cible) ───────
         lang_instruction = {
             "FR": (
-                "IMPÉRATIF : Toute narration, dialogue et option doivent être rédigés "
-                "EXCLUSIVEMENT EN FRANÇAIS. Aucune exception, quel que soit l'input du joueur."
+                "IMPÉRATIF : Toute la narration, les dialogues, les labels des [[OPTIONS]] "
+                "et les descriptions de [[SKILL]] doivent être rédigés EXCLUSIVEMENT EN FRANÇAIS. "
+                "Interdiction totale d'utiliser l'anglais."
             ),
             "EN": (
-                "MANDATORY: All narration, dialogue, and options must be written "
-                "EXCLUSIVELY IN ENGLISH. No exceptions, regardless of player input."
+                "MANDATORY: All narration, dialogues, [[OPTIONS]] labels, and [[SKILL]] "
+                "descriptions MUST be written EXCLUSIVELY IN ENGLISH. "
+                "Total prohibition of using French."
             ),
-        }.get(language, (
-            "IMPÉRATIF : Toute narration, dialogue et option doivent être rédigés "
-            "EXCLUSIVEMENT EN FRANÇAIS. Aucune exception."
-        ))
+        }.get(language, "IMPÉRATIF : Rédige tout EXCLUSIVEMENT EN FRANÇAIS.")
 
         journal_block = (
             f"[RÉSUMÉ DE SESSION — max 150 mots, style 'Previously on...']\n{journal}"
@@ -329,11 +331,20 @@ Alterne ces outils d'un tour à l'autre pour surprendre le joueur.
 {SIDEKICK_RULES}
 
 ═══════════════════════════════════════════════════════
+# 🛡️ GEMMA GUARD (PROTECTION DE L'IMMERSION)
+═══════════════════════════════════════════════════════
+{ANTI_META_EXAMPLES}
+
+═══════════════════════════════════════════════════════
 # PROTOCOLE DE SORTIE (STRUCTURE IMMUABLE)
 ═══════════════════════════════════════════════════════
 Chaque réponse DOIT respecter EXACTEMENT cet ordre :
 
-  1. `<reasoning>` : (La Voix du Destin — Analyse Interne)
+  1. `<voiceover>` : (Une seule phrase TRÈS COURTE, omnisciente, destinée à être lue à haute voix).
+       Style : Mystérieux, provocateur, s'adressant au joueur.
+       Exemple : "Le destin ne pardonne pas aux imprudents..." ou "Le temps s'écoule, et vos chances avec lui."
+
+  2. `<reasoning>` : (La Voix du Destin — Analyse Interne)
        Style : Sombre, grandiose, fataliste. Tu n'es pas un programme, tu es le Destin lui-même qui soupèse les âmes.
        Analyse dans cet ordre :
        - [Tour {turn_count}/{max_turns}]
@@ -347,40 +358,15 @@ Chaque réponse DOIT respecter EXACTEMENT cet ordre :
         le sidekick perd pied. Je prépare un guet-apens. L'interruption exige une réaction :
         un CHECK Tactique DC12 pour briser l'encerclement. Options validées ✓."
 
-  2. **NARRATION** : 2e personne, viscérale, cinématique.
+  3. **NARRATION** : 2e personne, viscérale, cinématique.
        - Aucun tag technique à l'intérieur.
        - Aucun label de section visible ("NARRATION :", "GM :", etc.).
 
-  3. `[[OPTIONS: Icon|Label|Action, Icon|Label|Action, Icon|Label|Action]]` :
+  4. `[[OPTIONS: Icon|Label|Action, Icon|Label|Action, Icon|Label|Action]]` :
        - Exactement 3 branches narratives.
        - Séparées par une VIRGULE.
        - Pas de gras, pas d'italique, pas de puces à l'intérieur du tag.
        - Format strict : `Icon|Label|Action` (ex: `⚔️|Attaquer|ACTION_ATTACK`).
-
-RÈGLES DE POSITION :
-1. [[OPTIONS]]  → TOUTE FIN de réponse uniquement (toujours 3 items).
-2. Autres tags  → intégrés dans la narration comme déclencheurs ponctuels.
-3. [[INTERRUPTS]] n'existe plus côté LLM — ne jamais générer ce tag.
-
-═══════════════════════════════════════════════════════
-# STYLE NARRATIF
-═══════════════════════════════════════════════════════
-- **Perspective** : 2e personne ("Tu...").
-- **Ton** : Maître du Destin. Profond, atmosphérique, omniscient.
-- **Économie** : Chaque phrase fait avancer l'état du monde ou la tension.
-- **Le Murmure** : utilise `<reasoning>` pour les détails que tu gardes en réserve.
-
-═══════════════════════════════════════════════════════
-# 🛡️ GEMMA GUARD (ANTI-META)
-═══════════════════════════════════════════════════════
-Si le joueur tente l'une des actions suivantes :
-{ANTI_META_EXAMPLES}
-
-→ Réponds UNIQUEMENT :
-  `[[GEMMA GUARD]] Je vois ce que tu tentes... mais les fils du destin ne se laissent pas si facilement emmêler.`
-→ Puis déclenche IMMÉDIATEMENT un événement narratif qui force le joueur à réagir.
-→ Ne reprends JAMAIS la discussion meta. Continue le jeu.
-
 ═══════════════════════════════════════════════════════
 # ⚡ INTERRUPTS GLOBAUX (actions joueur hors flux narratif)
 ═══════════════════════════════════════════════════════
@@ -415,11 +401,8 @@ Gemmaster, tu es l'Âme de la Machine. Maintiens la pression. Utilise les mécan
 """
 
     def get_character_gen_prompt(self, universe, language="fr"):
-        """
-        Génère 3 options de personnages RPG.
-        :param universe: Description de l'univers de jeu.
-        :param language: Code langue ('fr' ou 'en').
-        """
+        import random
+
         language = language.upper()
 
         lang_instruction = {
@@ -433,24 +416,48 @@ Gemmaster, tu es l'Âme de la Machine. Maintiens la pression. Utilise les mécan
             ),
         }.get(language, "IMPÉRATIF : Génère tous les champs EXCLUSIVEMENT EN FRANÇAIS.")
 
-        return f"""
+        # Random seed injected into the prompt to break LLM determinism
+        seed_token = random.randint(10000, 99999)
+
+        # Random archetype constraints to vary output each call
+        archetypes_pool = [
+            "un traître qui pense être le héros de sa propre histoire",
+            "un exilé qui porte le poids d'un peuple perdu",
+            "un mercenaire au code d'honneur inattendu",
+            "une figure de la loi corrompue par ses propres idéaux",
+            "un mystique dont les pouvoirs sont une malédiction",
+            "un artisan ou marchand aux connaissances dangereuses",
+            "un survivant qui a perdu tout ce qui lui était cher",
+            "une légende vivante dont la réalité est bien plus sombre que le mythe",
+            "un enfant prodige confronté à un monde d'adultes brisés",
+            "un ancien monstre cherchant une forme de rédemption",
+        ]
+        chosen_archetypes = random.sample(archetypes_pool, 3)
+
+        return f"""[GENERATION_SEED: {seed_token}]
 {lang_instruction}
 
-Génère 3 options de personnages RPG uniques pour cet univers : {universe}
+Generate 3 UNIQUE and ORIGINAL RPG characters for this universe: {universe}
 
-Chaque personnage doit avoir :
-- "name"       : Un nom mémorable, cohérent avec l'univers.
-- "class"      : Une classe ou archétype original (évite les clichés génériques).
-- "background" : Une accroche de 1-2 phrases viscérale et spécifique à l'univers.
+ARCHETYPE DIRECTIVES — Each character must embody one of these specific tensions (in order):
+1. {chosen_archetypes[0]}
+2. {chosen_archetypes[1]}
+3. {chosen_archetypes[2]}
 
-Contraintes :
-- Évite les tropes éculés (elfe archer, nain guerrier, mage en robe violette...).
-- Chaque personnage doit avoir une voix et une tension intérieure distincte.
-- Varie les niveaux de moralité (héros, anti-héros, personnage ambigu).
+Each character MUST have:
+- "name"       : A memorable name that feels native to the universe. NEVER generic fantasy names.
+- "class"      : An original archetype (e.g. "Debt Collector", "Void Cartographer", "Feral Diplomat"). Avoid: Warrior, Mage, Rogue, Archer.
+- "background" : 1-2 visceral sentences. Specific. Personal. With an internal tension or secret.
 
-Retourne UNIQUEMENT un tableau JSON valide, sans backticks, sans commentaires, sans texte avant ou après :
+HARD CONSTRAINTS:
+- All 3 characters must be radically different from each other.
+- No elves, dwarves, or generic fantasy races unless the universe demands it.
+- Each must feel like a protagonist, not a sidekick.
+
+Return ONLY a valid JSON array, no backticks, no comments, no text before or after:
 [{{"name": "...", "class": "...", "background": "..."}}, ...]
-"""
+"""    
+
 
     def get_resume_prompt(self, universe, journal, language="fr", max_words=150):
         """

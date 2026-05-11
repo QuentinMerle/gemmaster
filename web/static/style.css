@@ -32,23 +32,25 @@
 
 /* Enable smooth color transitions for CSS variables */
 @property --blob-1-color {
-  syntax: '<color>';
-  initial-value: #3372f5;
-  inherits: true;
+    syntax: '<color>';
+    initial-value: #3372f5;
+    inherits: true;
 }
 
 @property --blob-2-color {
-  syntax: '<color>';
-  initial-value: #3372f5;
-  inherits: true;
+    syntax: '<color>';
+    initial-value: #3372f5;
+    inherits: true;
 }
 
 /* Light Mode Overrides */
 .light-theme {
     --void: #f8fafc;
-    --glass: rgba(255, 255, 255, 0.85); /* More opaque for contrast */
+    --glass: rgba(255, 255, 255, 0.85);
+    /* More opaque for contrast */
     --glass-border: rgba(51, 114, 245, 0.2);
-    --text-main: #0f172a; /* Darker slate for better contrast */
+    --text-main: #0f172a;
+    /* Darker slate for better contrast */
     --text-muted: #475569;
     --paper: #ffffff;
     --shadow-premium: 0 10px 30px rgba(51, 114, 245, 0.15);
@@ -56,7 +58,8 @@
     /* Adapt Blobs for Light Mode */
     --blob-1-color: #93c5fd;
     --blob-2-color: #c084fc;
-    --blob-opacity: 0.1; /* Slightly lower to not overpower text */
+    --blob-opacity: 0.1;
+    /* Slightly lower to not overpower text */
 }
 
 
@@ -224,21 +227,34 @@ body {
     animation: statusPulse 2s infinite;
 }
 
-.engine-status-badge.offline, .engine-status-badge.missing_model {
+.engine-status-badge.offline,
+.engine-status-badge.missing_model {
     color: var(--accent-orange);
     border-color: rgba(245, 114, 51, 0.2);
     background: rgba(245, 114, 51, 0.05);
 }
 
-.engine-status-badge.offline .status-dot, .engine-status-badge.missing_model .status-dot {
+.engine-status-badge.offline .status-dot,
+.engine-status-badge.missing_model .status-dot {
     background: var(--accent-orange);
     box-shadow: 0 0 10px var(--accent-orange);
 }
 
 @keyframes statusPulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.2); opacity: 0.7; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .logo-icon {
@@ -1199,7 +1215,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     max-width: 400px;
-    animation: slideIn 0.4s ease-out;
 }
 
 .tactical-dice-card.success {
@@ -1802,19 +1817,64 @@ body {
 }
 
 /* Premium Theme Pill Toggle */
-.theme-pill {
+.nav-controls {
     position: absolute;
     right: 2rem;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.theme-pill,
+.voice-btn {
+    position: relative;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: 30px;
     padding: 4px;
-    width: 64px;
     height: 32px;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     overflow: hidden;
     backdrop-filter: blur(8px);
+}
+
+.theme-pill {
+    width: 64px;
+}
+
+.voice-btn {
+    width: auto;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.voice-btn.active {
+    background: var(--accent-blue);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.voice-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.light-theme .voice-btn {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
+}
+
+.light-theme .voice-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.light-theme .voice-btn.active {
+    background: var(--accent-purple);
+    color: white;
 }
 
 .pill-track {
@@ -1867,7 +1927,6 @@ body {
     z-index: 1100;
     left: 2rem;
     top: 6rem;
-    /* bottom: 2rem; */
     width: 260px;
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
     display: flex;
@@ -1877,6 +1936,55 @@ body {
     background: rgba(18, 19, 23, 0.8);
     backdrop-filter: blur(25px);
     border: 1px solid var(--glass-border);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+.hero-dashboard.hidden {
+    transform: translateX(calc(-100% - 3rem));
+}
+
+.dashboard-toggle {
+    position: absolute;
+    right: -1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 80px;
+    background: rgba(51, 114, 245, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(51, 114, 245, 0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--accent-blue);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1200;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-toggle:hover {
+    background: rgba(51, 114, 245, 0.25);
+    color: white;
+    box-shadow: 0 0 20px rgba(51, 114, 245, 0.4);
+    right: -1.2rem;
+    /* Petit effet de ressort */
+}
+
+.dashboard-toggle svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-dashboard.hidden .dashboard-toggle {
+    right: -2rem;
+    /* On le décale un peu plus quand c'est fermé pour qu'il soit bien visible sur le bord de l'écran */
+}
+
+.hero-dashboard.hidden .dashboard-toggle svg {
+    transform: rotate(180deg);
 }
 
 .hero-list-scroll {
@@ -2908,7 +3016,7 @@ body {
     padding: 0 1rem;
 }
 
-/* --- Studio-Grade Thinking Indicator (Super Loader) --- */
+/* --- Immersive Core Thinking Indicator (Super Loader) --- */
 .thinking-bubble-lux {
     display: flex;
     align-items: center;
@@ -3348,28 +3456,49 @@ h3,
 }
 
 /* --- WIZARD TRANSITIONS --- */
-.wizard-panel {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.wizard-step-content {
+    position: absolute;
+    width: 100%;
 }
 
-.wizard-enter {
-    opacity: 0;
-    transform: translateX(30px);
+.wizard-steps-wrapper {
+    position: relative;
+    min-height: 260px;
+    /* overflow: hidden; */
 }
 
-.wizard-enter-end {
-    opacity: 1;
-    transform: translateX(0);
+/* Enter from right */
+@keyframes wizardSlideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
-.wizard-leave {
-    opacity: 1;
-    transform: translateX(0);
+/* Enter from left */
+@keyframes wizardSlideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
-.wizard-leave-end {
-    opacity: 0;
-    transform: translateX(-30px);
+.wizard-animate-forward {
+    animation: wizardSlideInRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.wizard-animate-back {
+    animation: wizardSlideInLeft 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 /* --- SPECIFIC LIGHT MODE OVERRIDES --- */
@@ -3554,8 +3683,15 @@ h3,
 }
 
 @keyframes portalIn {
-    from { opacity: 0; transform: scale(0.9) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .vision-header {
@@ -3589,8 +3725,12 @@ h3,
 }
 
 .vision-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
     color: var(--text-muted);
+    padding: 2rem;
 }
 
 .vision-icon {
@@ -3619,29 +3759,87 @@ h3,
     animation: manifestFade 1s ease-out;
 }
 
+.vision-manifested.analyzing {
+    filter: sepia(0.5) hue-rotate(180deg) brightness(1.2);
+}
+
+.analysis-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(51, 114, 245, 0.2);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--accent-blue);
+    box-shadow: 0 0 20px var(--accent-blue), 0 0 40px var(--accent-blue);
+    animation: scanning 2s ease-in-out infinite;
+}
+
+@keyframes scanning {
+    0% { top: 0%; }
+    50% { top: 100%; }
+    100% { top: 0%; }
+}
+
+.analysis-text {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 0.8rem 1.5rem;
+    border-radius: 40px;
+    border: 1px solid var(--accent-blue);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: white;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+    box-shadow: 0 0 30px rgba(51, 114, 245, 0.4);
+}
+
 @keyframes manifestFade {
-    from { filter: blur(20px) brightness(2); opacity: 0; }
-    to { filter: blur(0) brightness(1); opacity: 1; }
+    from {
+        filter: blur(20px) brightness(2);
+        opacity: 0;
+    }
+
+    to {
+        filter: blur(0) brightness(1);
+        opacity: 1;
+    }
 }
 
 .manifest-shimmer {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        45deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.1) 45%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0.1) 55%,
-        transparent 100%
-    );
+    background: linear-gradient(45deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 45%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.1) 55%,
+            transparent 100%);
     background-size: 200% 200%;
     animation: shimmer 3s infinite;
 }
 
 @keyframes shimmer {
-    0% { background-position: -200% -200%; }
-    100% { background-position: 200% 200%; }
+    0% {
+        background-position: -200% -200%;
+    }
+
+    100% {
+        background-position: 200% 200%;
+    }
 }
 
 /* Scanner Effect */
@@ -3665,10 +3863,23 @@ h3,
 }
 
 @keyframes scan {
-    0% { top: 0; opacity: 0; }
-    5% { opacity: 1; }
-    95% { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
+    0% {
+        top: 0;
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    95% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
 }
 
 .vision-footer {

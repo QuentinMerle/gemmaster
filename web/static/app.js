@@ -15,11 +15,14 @@ function gameState() {
         isThinking: false,
         isNarrating: false,
         wizardStep: 1,
+        wizardDir: 'forward',
         
-        storyTitle: "Echoes of the Void",
+        storyTitle: "Echoes of Destiny",
         storyBeat: "Prologue",
         placeholder: "Enter your action or ask Gemma...",
         turnCount: 0,
+        voiceActive: false,
+        showDashboard: true,
         
         party: [],
         charOptions: [],
@@ -42,6 +45,9 @@ function gameState() {
 
         // --- Core Lifecycle ---
         async init() {
+            // Early initialization of critical globals
+            window.processedSkills = new Set();
+            
             try {
                 const partyData = await window.API.fetchParty();
                 if (partyData && partyData.length > 0) {
@@ -53,7 +59,20 @@ function gameState() {
                     chat.innerHTML = '';
                     journalData.forEach(entry => window.UI.addMessage(entry.content, entry.role, null, this.party));
                     
-                this.inventory = await window.API.fetchInventory();
+                    // Restoring State from Journal
+                    const aiEntries = journalData.filter(e => e.role === 'ai');
+                    this.turnCount = aiEntries.length; 
+                    
+                    if (aiEntries.length > 0) {
+                        const lastAiText = aiEntries[aiEntries.length - 1].content;
+                        // Use a small timeout to ensure DOM and UI helpers are fully ready
+                        setTimeout(() => {
+                            window.processedSkills.clear(); // Ensure we can re-process the last message
+                            this.processTriggers(lastAiText);
+                        }, 100);
+                    }
+                    
+                    this.inventory = await window.API.fetchInventory();
                 } else {
                     this.showSetup = true;
                 }
@@ -112,7 +131,7 @@ function gameState() {
             // Format dynamic header: Theme | Tone | Duration
             const configSummary = `${this.config.theme.toUpperCase()} | ${this.config.tone.toUpperCase()} | ${this.config.duration.toUpperCase()}`;
             this.storyBeat = configSummary;
-            this.storyTitle = "Echoes of the Void"; 
+            this.storyTitle = "Echoes of Destiny"; 
 
             // Trigger Intro Narration
             window.UI.shiftColors();
@@ -195,7 +214,6 @@ function gameState() {
             console.log("👥 Current Party State:", JSON.parse(JSON.stringify(this.party)));
             
             const images = this.previewImage ? [this.previewImage.split(',')[1]] : [];
-            this.previewImage = null;
 
             const aiMsgDiv = window.UI.addMessage('', 'ai', null, this.party);
             this.turnCount++; // Increment turn for the AI Director
@@ -206,6 +224,7 @@ function gameState() {
             } catch (e) { }
             finally { 
                 this.isThinking = false; 
+                this.previewImage = null; // Clear image ONLY after processing is done
             }
         },
 
@@ -216,6 +235,9 @@ function gameState() {
             this.isNarrating = true;
             window.processedSkills = window.processedSkills || new Set();
 
+            // Reset TTS state for this new turn
+            if (window.audioEngine) window.audioEngine.resetTurn();
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -223,177 +245,19 @@ function gameState() {
                 fullText += decoder.decode(value, { stream: true });
                 window.UI.updateAIMessage(div, fullText);
                 this.processTriggers(fullText);
+
+                // Live TTS — read new complete sentences as they arrive
+                if (window.audioEngine) window.audioEngine.streamSpeak(fullText);
             }
             this.isNarrating = false;
         },
 
         processTriggers(fullText) {
-            // Ambiance / Sound (Robust matching)
-            const ambianceMatches = Array.from(fullText.matchAll(/\[\[(AMBIANCE|SOUND):\s*(.*?)\]\]/gi));
-            ambianceMatches.forEach(match => {
-                const tag = match[0];
-                const type = match[1].toUpperCase();
-                const value = match[2].trim().toUpperCase();
-                
-                if (!window.processedSkills.has(tag)) {
-                    console.log(`🎬 Triggering ${type}: ${value}`);
-                    if (type === 'AMBIANCE') window.UI.shiftColors(value);
-                    if (type === 'SOUND') console.log("🔊 Sound Trigger:", value);
-                    window.processedSkills.add(tag);
-                }
-            });
-
-            // QTE
-            const qteMatch = fullText.match(/\[\[SKILL: QTE,\s*(.*?),\s*(.*?)\]\]/i);
-            if (qteMatch && !this.qte.active && !window.processedSkills.has(qteMatch[0])) {
-                window.processedSkills.add(qteMatch[0]);
-                const seq = qteMatch[1].toUpperCase().replace(/[^WASD]/g, '').substring(0,4).split('');
-                this.startQTE(seq, parseInt(qteMatch[2]) || 5);
+            if (window.StreamParser) {
+                window.StreamParser.processTriggers(this, fullText);
+            } else {
+                console.warn("StreamParser not found.");
             }
-
-            // Items / Loot
-            const itemMatch = fullText.match(/\[\[ADD_ITEM:\s*(.*?),\s*(.*?)\]\]/i);
-            if (itemMatch && !window.processedSkills.has('ITEM_' + itemMatch[0])) {
-                const itemName = itemMatch[1].trim();
-                const itemImg = itemMatch[2].trim();
-                this.inventory.push({ name: itemName, image: itemImg });
-                window.API.saveInventory(this.inventory);
-                window.processedSkills.add('ITEM_' + itemMatch[0]);
-            }
-
-            // Danger Level (Combat)
-            const dangerMatch = fullText.match(/\[\[DANGER:\s*([\+\-]?\d+)\]\]/i);
-            if (dangerMatch) {
-                const val = parseInt(dangerMatch[1]);
-                if (dangerMatch[1].startsWith('+') || dangerMatch[1].startsWith('-')) {
-                    this.dangerLevel = Math.max(0, Math.min(100, this.dangerLevel + val));
-                } else {
-                    this.dangerLevel = Math.max(0, Math.min(100, val));
-                }
-                
-                // On ne force plus le rouge ici pour laisser le tag [[AMBIANCE]] de l'IA décider
-                // Sauf si le danger est critique (>75%), là on peut forcer une alerte visuelle.
-                if (this.dangerLevel >= 75) {
-                    window.UI.shiftColors('DANGER');
-                }
-            }
-
-            // --- Skill Triggers ---
-
-            // COMBAT
-            const combatMatch = fullText.match(/\[\[SKILL: COMBAT,\s*(.*?)\]\]/i);
-            if (combatMatch && !window.processedSkills.has(combatMatch[0])) {
-                window.processedSkills.add(combatMatch[0]);
-                this.placeholder = "Combat initiated! Choose your tactical action...";
-            }
-
-            // VISION
-            const visionMatch = fullText.match(/\[\[SKILL: VISION,\s*(.*?)\]\]/i);
-            if (visionMatch && !this.visionQuest.active && !window.processedSkills.has(visionMatch[0])) {
-                window.processedSkills.add(visionMatch[0]);
-                this.visionQuest.active = true;
-                this.visionQuest.description = visionMatch[1].trim();
-                this.placeholder = "👁️ Vision quest active...";
-            }
-
-            // --- Interaction Tag Parsing ---
-            
-            // 1. INTERRUPTS (Dynamic reacting - Bottom Bar)
-            const intMatches = Array.from(fullText.matchAll(/\*?\*?\[{2}INTERRUPTS?:\s*([\s\S]*?)\]{2}\*?\*?/gi));
-            if (intMatches.length > 0) {
-                let allInts = [];
-                intMatches.forEach(match => {
-                    const tagContent = match[1].trim();
-                    let rawItems = tagContent.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                    
-                    // Fallback: if no commas but multiple pipes, model might be using | as item separator
-                    if (rawItems.length === 1 && (rawItems[0].match(/\|/g) || []).length > 2) {
-                        const pipes = rawItems[0].split('|').map(s => s.trim());
-                        if (pipes.length >= 6 && pipes.length % 3 === 0) {
-                            rawItems = [];
-                            for(let k=0; k<pipes.length; k+=3) rawItems.push(`${pipes[k]}|${pipes[k+1]}|${pipes[k+2]}`);
-                        } else {
-                            rawItems = pipes;
-                        }
-                    }
-
-                    const parts = rawItems.map(i => {
-                        // Clean up any extra [METADATA] or ** markers the model might have added
-                        let cleanItem = i.replace(/\[.*?\]/g, '').replace(/\*/g, '').trim();
-                        const p = cleanItem.split('|').map(s => s.trim());
-                        
-                        if (p.length === 1) {
-                            const itemText = p[0];
-                            const iconMatch = itemText.match(/^([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])\s*(.*)$/);
-                            if (iconMatch && iconMatch[2]) return { icon: iconMatch[1], label: iconMatch[2].toUpperCase(), action: iconMatch[2] };
-                            if (iconMatch) return null; // Skip lone icons
-                            return { icon: '👉', label: itemText.toUpperCase(), action: itemText };
-                        }
-                        return { icon: p[0]||'👉', label: (p[1]||p[0]).toUpperCase(), action: p[2]||p[1]||p[0] };
-                    }).filter(x => x !== null);
-                    allInts = allInts.concat(parts);
-                });
-                this.interrupts = allInts.slice(0, 3);
-            }
-
-            // 2. OPTIONS (Main Narrative Choices - End of message)
-            const optMatches = Array.from(fullText.matchAll(/\*?\*?\[{1,2}OPTIONS?[:\s]*([\s\S]*?)(?:\]{1,2}|$)/gi));
-            if (optMatches.length > 0) {
-                let allOpts = [];
-                optMatches.forEach(match => {
-                    const tagContent = match[1].trim();
-                    let rawItems = tagContent.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                    
-                    // Fallback: if no commas but multiple pipes, model might be using | as item separator
-                    if (rawItems.length === 1 && (rawItems[0].match(/\|/g) || []).length > 2) {
-                        const pipes = rawItems[0].split('|').map(s => s.trim());
-                        if (pipes.length >= 6 && pipes.length % 3 === 0) {
-                            rawItems = [];
-                            for(let k=0; k<pipes.length; k+=3) rawItems.push(`${pipes[k]}|${pipes[k+1]}|${pipes[k+2]}`);
-                        } else {
-                            rawItems = pipes;
-                        }
-                    }
-
-                    const parts = rawItems.map(i => {
-                        // Clean up any extra [METADATA] or ** markers the model might have added
-                        let cleanItem = i.replace(/\[.*?\]/g, '').replace(/\*/g, '').trim();
-                        const p = cleanItem.split('|').map(s => s.trim());
-                        
-                        if (p.length === 1) {
-                            const itemText = p[0];
-                            const iconMatch = itemText.match(/^([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])\s*(.*)$/);
-                            if (iconMatch && iconMatch[2]) return { icon: iconMatch[1], label: iconMatch[2].toUpperCase(), action: iconMatch[2] };
-                            if (iconMatch) return null; 
-                            return { icon: '✨', label: itemText.toUpperCase(), action: itemText };
-                        }
-                        return { icon: p[0]||'✨', label: (p[1]||p[0]).toUpperCase(), action: p[2]||p[1]||p[0] };
-                    }).filter(x => x !== null);
-                    
-                    if (parts.length > 0) {
-                        allOpts = allOpts.concat(parts);
-                    }
-                });
-                if (allOpts.length > 0) this.options = allOpts.slice(0, 3);
-            } else if (this.options.length === 0 && !this.isThinking && !this.isNarrating && fullText.length > 100) {
-                // FALLBACK for OPTIONS: only if narration is truly finished and no options were found
-                const last300 = fullText.slice(-300);
-                const bullets = last300.match(/^[\*\-]\s*(.*)$/gm);
-                if (bullets && bullets.length > 0) {
-                    this.options = bullets.slice(0, 3).map(b => {
-                        const label = b.replace(/^[\*\-]\s*/, '').split(':')[0].trim();
-                        return { icon: '👉', label: label.substring(0, 30).toUpperCase(), action: label };
-                    });
-                } else if (fullText.length > 500) {
-                    this.options = [{ icon: '✨', label: 'CONTINUE...', action: 'Continue the story.' }];
-                }
-            }
-
-            const pMatch = fullText.match(/\[\[PLACEHOLDER:\s*(.*?)\]\]/i);
-            if (pMatch) this.placeholder = pMatch[1];
-
-            const focusMatch = fullText.match(/\[\[FOCUS:\s*(.*?)\]\]/i);
-            if (focusMatch) this.focusHero = focusMatch[1].trim();
         },
 
         // --- Mechanics ---
@@ -428,9 +292,19 @@ function gameState() {
         },
 
         async submitVision() {
-            if (!this.previewImage) return;
+            if (!this.previewImage || this.isThinking) return;
+            
+            // Keep portal open but show analysis state
+            this.isThinking = true;
+            
+            // The actual message sent to the LLM
+            const msg = `[VISION MANIFESTED: ${this.visionQuest.description}]`;
+            
+            // Use the standard send process which handles the image and API call
+            await this.sendMessage(msg);
+            
+            // Close portal once the processing starts/finishes
             this.visionQuest.active = false;
-            this.sendMessage(`[VISION MANIFESTED: ${this.visionQuest.description}]`);
         },
 
         interrupt(action) {

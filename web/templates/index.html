@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GemMaster | Studio</title>
+    <title>💎 GemMaster | Immersive RPG Engine powered by Gemma 4</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
@@ -13,6 +13,8 @@
     <script src="/static/js/utils.js" defer></script>
     <script src="/static/js/ui_helpers.js" defer></script>
     <script src="/static/js/api.js" defer></script>
+    <script src="/static/js/audio.js" defer></script>
+    <script src="/static/js/stream_parser.js" defer></script>
     <script src="/static/app.js" defer></script>
 
     <!-- Alpine must be last to ensure gameState is defined -->
@@ -61,37 +63,61 @@
             <span class="logo-text">GemMaster</span>
         </div>
 
-        <button @click="darkMode = !darkMode" class="theme-pill" :class="darkMode ? 'dark' : 'light'">
-            <div class="pill-track">
-                <div class="pill-indicator">
-                    <template x-if="darkMode">
-                        <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </template>
-                    <template x-if="!darkMode">
-                        <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                        </svg>
-                    </template>
+        <div class="nav-controls">
+            <!-- TTS Toggle -->
+            <button
+                @click="voiceActive = !voiceActive; if(window.audioEngine) window.audioEngine.toggleSpeech(config.language)"
+                class="voice-btn" :class="voiceActive ? 'active' : ''">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <span style="font-size: 12px; font-weight: 600;">VOICE</span>
+            </button>
+
+            <!-- Dark Mode Toggle -->
+            <button @click="darkMode = !darkMode" class="theme-pill" :class="darkMode ? 'dark' : 'light'">
+                <div class="pill-track">
+                    <div class="pill-indicator">
+                        <template x-if="darkMode">
+                            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                        </template>
+                        <template x-if="!darkMode">
+                            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </template>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
     </nav>
 
     <div class="app-viewport">
         <!-- Premium Hero Dashboard -->
-        <aside class="floating-card hero-dashboard" x-show="party.length > 0" x-transition x-cloak>
+        <aside class="floating-card hero-dashboard" x-show="party.length > 0" :class="{ 'hidden': !showDashboard }"
+            x-transition x-cloak>
+
+            <!-- Sidebar Toggle Handle -->
+            <div class="dashboard-toggle" @click="showDashboard = !showDashboard" title="Toggle Dashboard">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </div>
+
             <div class="dashboard-header">
                 <span class="setup-label">Active Persona</span>
             </div>
@@ -146,7 +172,7 @@
 
             <div class="dashboard-footer">
                 <button @click="resetGame()" class="reset-btn-lux">
-                    <span>RESET REALITY</span>
+                    <span>REWEAVE DESTINY</span>
                 </button>
             </div>
         </aside>
@@ -196,19 +222,19 @@
         <!-- Gemini-Style Input Dock -->
         <div class="input-dock">
             <!-- Quick Actions (BG3 Style Interrupts) -->
-            <div x-show="gameStarted && heroSelected" class="interrupt-dock">
+            <div x-show="!showSetup && party.length > 0" class="interrupt-dock">
                 <!-- Global Actions (Permanent) -->
                 <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_ATTACK')">
                     <span class="btn-icon">⚔️</span>
-                    <span class="btn-label">ATTAQUER</span>
+                    <span class="btn-label">ATTACK</span>
                 </button>
                 <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_FLEE')">
                     <span class="btn-icon">🏃</span>
-                    <span class="btn-label">FUIR</span>
+                    <span class="btn-label">FLEE</span>
                 </button>
                 <button class="interrupt-btn" @click="sendInterrupt('INTERRUPT_STEALTH')">
                     <span class="btn-icon">👁️</span>
-                    <span class="btn-label">OBSERVER</span>
+                    <span class="btn-label">OBSERVE</span>
                 </button>
 
                 <!-- Dynamic Interrupts (Legacy/Optional) -->
@@ -258,21 +284,45 @@
             </div>
             <div class="portal-content">
                 <div class="vision-header">
-                    <span class="setup-label">Multimodal Manifestation</span>
-                    <h2 x-text="visionQuest.description"></h2>
+                    <span class="setup-label" style="letter-spacing: 2px; opacity: 0.7;">VISION QUEST OBJECTIVE</span>
+                    <h2 x-text="visionQuest.description"
+                        style="font-size: 2.2rem; margin-top: 0.5rem; text-shadow: 0 0 20px rgba(51, 114, 245, 0.4);">
+                    </h2>
                 </div>
                 <div class="vision-display">
                     <template x-if="!previewImage">
                         <div class="vision-placeholder" @click="$refs.fileInput.click()">
                             <div class="vision-icon">👁️</div>
-                            <p>Show your reality to Gemma</p>
-                            <span class="vision-hint">Click to upload or drag & drop</span>
+                            <div style="margin-bottom: 1.5rem; max-width: 80%;">
+                                <p
+                                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 0.5rem;">
+                                    Action Required</p>
+                                <p style="font-size: 1.2rem; color: var(--text-color); line-height: 1.4;">
+                                    Please upload or take a photo of:
+                                    <br>
+                                    <span
+                                        style="font-size: 1.8rem; font-weight: 800; color: var(--accent-blue); display: block; margin-top: 0.5rem;"
+                                        x-text="'« ' + visionQuest.description + ' »'"></span>
+                                </p>
+                            </div>
+                            <span class="vision-hint">Click to capture your reality</span>
                         </div>
                     </template>
                     <template x-if="previewImage">
-                        <div class="vision-manifested">
+                        <div class="vision-manifested" :class="isThinking ? 'analyzing' : ''">
                             <img :src="previewImage" class="manifested-img">
                             <div class="manifest-shimmer"></div>
+
+                            <!-- Analysis Overlay -->
+                            <template x-if="isThinking">
+                                <div class="analysis-overlay">
+                                    <div class="scan-line"></div>
+                                    <div class="analysis-text">
+                                        <div class="dot-pulse"><span></span><span></span><span></span></div>
+                                        <span>ANALYZING REALITY</span>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
@@ -348,11 +398,10 @@
                 </div>
             </div>
 
-            <div class="setup-sections">
+            <div class="setup-sections wizard-steps-wrapper">
                 <!-- STEP 1: THE WORLD -->
-                <div x-show="wizardStep === 1" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
-                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
-                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                <div x-show="wizardStep === 1"
+                    :class="wizardDir === 'forward' ? 'wizard-animate-forward' : 'wizard-animate-back'"
                     class="wizard-step-content">
                     <div class="setup-field full-width">
                         <label class="setup-label">World Theme</label>
@@ -380,9 +429,8 @@
                 </div>
 
                 <!-- STEP 2: THE GAMEPLAY -->
-                <div x-show="wizardStep === 2" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
-                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
-                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                <div x-show="wizardStep === 2"
+                    :class="wizardDir === 'forward' ? 'wizard-animate-forward' : 'wizard-animate-back'"
                     class="wizard-step-content">
                     <div class="setup-field">
                         <label class="setup-label">Session Duration</label>
@@ -399,16 +447,16 @@
                         <div class="segmented-control">
                             <template x-for="f in ['solo', 'sidekick']">
                                 <button class="segment-btn" :class="config.partyMode === f ? 'active' : ''"
-                                    @click="config.partyMode = f" x-text="f === 'solo' ? 'SOLO JOURNEY' : 'WITH SIDEKICK'"></button>
+                                    @click="config.partyMode = f"
+                                    x-text="f === 'solo' ? 'SOLO JOURNEY' : 'WITH SIDEKICK'"></button>
                             </template>
                         </div>
                     </div>
                 </div>
 
                 <!-- STEP 3: THE ENGINE -->
-                <div x-show="wizardStep === 3" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
-                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
-                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                <div x-show="wizardStep === 3"
+                    :class="wizardDir === 'forward' ? 'wizard-animate-forward' : 'wizard-animate-back'"
                     class="wizard-step-content">
                     <div class="setup-row">
                         <div class="setup-field">
@@ -433,9 +481,8 @@
                 </div>
 
                 <!-- STEP 4: RECRUITMENT -->
-                <div x-show="wizardStep === 4" x-transition:enter="wizard-panel" x-transition:enter-start="wizard-enter"
-                    x-transition:enter-end="wizard-enter-end" x-transition:leave="wizard-panel"
-                    x-transition:leave-start="wizard-leave" x-transition:leave-end="wizard-leave-end"
+                <div x-show="wizardStep === 4"
+                    :class="wizardDir === 'forward' ? 'wizard-animate-forward' : 'wizard-animate-back'"
                     class="wizard-step-content">
                     <div x-show="!customizing" class="carousel-container">
                         <div class="hero-carousel">
@@ -520,13 +567,13 @@
             </div>
 
             <div class="setup-footer" style="margin-top: 3rem; flex-direction: row; justify-content: space-between;">
-                <button x-show="wizardStep > 1 && wizardStep < 4" @click="wizardStep--"
+                <button x-show="wizardStep > 1" @click="wizardDir = 'back'; wizardStep--"
                     class="btn-secondary">BACK</button>
                 <div style="flex: 1;"></div>
-                <button x-show="wizardStep < 3" @click="wizardStep++" class="launch-master-btn"
+                <button x-show="wizardStep < 3" @click="wizardDir = 'forward'; wizardStep++" class="launch-master-btn"
                     style="width: auto; padding: 1rem 3rem;">NEXT</button>
-                <button x-show="wizardStep === 3" @click="generateHeroes()" class="launch-master-btn"
-                    :disabled="loadingSetup" style="width: auto; padding: 1rem 3rem;">
+                <button x-show="wizardStep === 3" @click="wizardDir = 'forward'; generateHeroes()"
+                    class="launch-master-btn" :disabled="loadingSetup" style="width: auto; padding: 1rem 3rem;">
                     <span x-show="!loadingSetup">GENERATE HEROES</span>
                     <span x-show="loadingSetup" style="display: flex; align-items: center; justify-content: center;">
                         <div class="dot-pulse"><span></span><span></span><span></span></div>
@@ -541,7 +588,8 @@
     <!-- Engine Status Indicator (Discreet Corner) -->
     <div class="engine-status-badge" :class="engineStatus.status" :title="`Model: ${engineStatus.model}`">
         <div class="status-dot"></div>
-        <span x-text="engineStatus.status === 'online' ? 'Engine Ready' : (engineStatus.status === 'checking' ? 'Checking...' : 'Engine Error')"></span>
+        <span
+            x-text="engineStatus.status === 'online' ? 'Engine Ready' : (engineStatus.status === 'checking' ? 'Checking...' : 'Engine Error')"></span>
     </div>
     <!-- Thinking Toast (Top-Right) -->
     <div class="thinking-toast" x-show="isThinking" x-transition x-cloak>

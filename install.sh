@@ -5,7 +5,7 @@
 
 set -e
 
-# Colors for "Studio-Grade" terminal output
+# Colors for "Immersive Core" terminal output
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 GREEN='\033[0;32m'

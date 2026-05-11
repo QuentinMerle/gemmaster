@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -9,6 +9,7 @@ from core.prompts import PromptTemplates
 import os
 import httpx
 import json
+import random
 from typing import Dict, Any, List
 from contextlib import asynccontextmanager
 
@@ -110,7 +111,11 @@ async def init_game():
                 "model": engine.model,
                 "prompt": prompt,
                 "stream": False,
-                "format": "json"
+                "format": "json",
+                "options": {
+                    "temperature": 1.2,
+                    "seed": random.randint(1, 999999)
+                }
             })
             data = response.json()
             if isinstance(data, list) and len(data) > 0:
@@ -255,6 +260,43 @@ async def save_inventory(request: Request):
     return {"status": "saved"}
 
 
+async def compress_memory_task(journal_file_path: str):
+    """Background task to summarize the journal to save tokens."""
+    print("🧠 Background Task: Compressing memory...")
+    entries = parser.parse_journal(journal_file_path)
+    
+    # Only compress if we have more than 12 entries
+    if len(entries) <= 12:
+        return
+        
+    # Summarize the oldest entries, keeping the last 4 for immediate context
+    entries_to_summarize = entries[:-4]
+    recent_entries = entries[-4:]
+    
+    text_to_summarize = "\n".join([f"{e['role']}: {e['content']}" for e in entries_to_summarize])
+    prompt = f"[SYSTEM] Summarize the following events of our RPG campaign in 3 epic sentences. Keep the crucial facts, character states, and locations.\n\n{text_to_summarize}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                f"{engine.base_url}/api/generate", 
+                json={"model": engine.model, "prompt": prompt, "stream": False}
+            )
+            summary = response.json().get("response", "")
+            
+            if summary:
+                # Rewrite journal replacing older entries with the summary
+                with open(journal_file_path, "w") as f:
+                    f.write("## 📜 Chronicle of Events\n\n")
+                    f.write(f"**PREVIOUSLY ON GEMMASTER**:\n{summary.strip()}\n\n---\n\n")
+                    for e in recent_entries:
+                        # Convert role to the expected bold label
+                        role_label = "**Player**" if e['role'] == "user" else "**Narrator**"
+                        f.write(f"{role_label}:\n{e['content'].strip()}\n\n---\n\n")
+                print("✅ Memory successfully compressed!")
+    except Exception as e:
+        print(f"⚠️ Failed to compress memory: {e}")
+
 @app.get("/journal")
 async def get_journal():
     return parser.parse_journal(JOURNAL_FILE)
@@ -268,7 +310,7 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "universe": universe, "party": party})
 
 @app.post("/chat")
-async def chat(request: Request):
+async def chat(request: Request, background_tasks: BackgroundTasks):
     data = await request.json()
     user_input = data.get("message")
     images = data.get("images", [])
@@ -286,15 +328,22 @@ async def chat(request: Request):
     except ValueError:
         max_turns = 15
 
-    # Memory Compression Trigger (at 80%)
-    # In a real system, we would trigger an async summarization here
-    # For now, we rely on the parser to limit `journal_context` to last 10 entries
+    # Memory Compression Trigger
+    # Trigger background task if the journal is getting too long (let's say every 5 turns)
+    if turn_count > 0 and turn_count % 5 == 0:
+        background_tasks.add_task(compress_memory_task, JOURNAL_FILE)
 
     # Prompt Injections (Invisible to UI, sent to LLM)
-    reminder = "\n\n[SYSTEM REMINDER: You MUST conclude your response with the [[OPTIONS: Icon|Label|Action, ...]] tag containing exactly 3 distinct choices. Do not overuse [[CHECK]]; remember to use [[SKILL: QTE]] or [[SKILL: VISION]] when appropriate.]"
+    language = config.get("language", "fr").lower()
     
+    if language == "en":
+        reminder = "\n\n[SYSTEM REMINDER: All narration and tags MUST be in ENGLISH. You MUST conclude your response with the [[OPTIONS]] tag containing exactly 3 choices. IMPORTANT: Never mention dice results or 'Success/Failure' in text. STOP narrating immediately after a [[CHECK]] or [[SKILL]] tag.]"
+    else:
+        reminder = "\n\n[RAPPEL SYSTÈME : Toute la narration et les tags doivent être en FRANÇAIS. Tu DOIS conclure par le tag [[OPTIONS]] avec exactement 3 choix. IMPORTANT : Ne mentionne jamais les résultats de dés ou 'Réussite/Échec' dans le texte. ARRÊTE de narrer immédiatement après un tag [[CHECK]] ou [[SKILL]].]"
+    
+    wrap_up = "\n\n[DIRECTIVE CRITIQUE : C'est le DERNIER TOUR. Tu DOIS conclure l'arc narratif MAINTENANT de façon épique et définitive EN FRANÇAIS.]" if language != "en" else "\n\n[CRITICAL DIRECTIVE: This is the FINAL TURN. You MUST conclude the narrative arc NOW in an epic and definitive manner IN ENGLISH. Provide final outcome options.]"
+
     if turn_count >= max_turns - 1:
-        wrap_up = "\n\n[CRITICAL DIRECTIVE: This is the FINAL TURN of the session. You MUST conclude the main narrative arc NOW in an epic and definitive manner. The options provided must lead to final outcomes.]"
         user_input += wrap_up
     else:
         user_input += reminder
