@@ -1,7 +1,7 @@
 # 💎 GemMaster: Studio-Grade Multimodal RPG
-> **Powered by Gemma 2 (4B) — Where your reality becomes the narrative.**
+> **Powered by Gemma 4 (e4b) — Where your reality becomes the narrative.**
 
-GemMaster is an immersive RPG narrative engine designed for the **Gemma 4 Challenge**. It transforms the classic text-adventure into a cinematic experience, bridging the digital and physical worlds through multimodal AI vision and dynamic visual storytelling.
+GemMaster is an immersive RPG narrative engine designed for the **Gemma 4 Challenge**. It transforms the classic text-adventure into a cinematic experience, bridging the digital and physical worlds through multimodal AI vision and dynamic visual storytelling with **Gemma 4**.
 
 ![GemMaster Interface](web/static/logo.svg) <!-- Replace with actual screenshot later -->
 
@@ -18,7 +18,7 @@ GemMaster isn't just a chatbot; it's an **AI Director**. Built with a focus on h
 
 ### Prerequisites
 - **Ollama** installed and running.
-- The **Gemma 2 (4B)** model pulled: `ollama pull gemma2:2b` (or 4b/9b depending on your hardware).
+- The **Gemma 4** model pulled: `ollama pull gemma4:e4b`.
 - **Python 3.10+**.
 
 ### Installation
@@ -41,12 +41,12 @@ python main.py
 Open your browser at `http://localhost:8000`.
 
 ## 🛠️ Architecture
-- **AI Engine**: Custom Prompt v4 (Organic Master) optimized for Gemma 2's reasoning.
+- **AI Engine**: Custom Prompt v4 (Organic Master) optimized for Gemma 4's reasoning.
 - **Frontend**: Alpine.js for a reactive, zero-latency "Liquid Logic" design.
 - **Backend**: FastAPI with multimodal streaming support.
 
 ## 🏆 Gemma 4 Challenge
-This project was built to showcase the power of the **Gemma 2** family in creating innovative, multimodal, and highly immersive gaming experiences.
+This project was built to showcase the power of the **Gemma 4** family in creating innovative, multimodal, and highly immersive gaming experiences.
 
 ---
 *Created with ❤️ for the Gemma 4 Challenge.*
