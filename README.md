@@ -3,7 +3,7 @@
 
 ![Start Your Journey](/web/static/assets/gemmaster%20-%20start%20your%20journey.png)
 
-GemMaster is an immersive RPG narrative engine designed for the **Gemma 4 Challenge**. It transforms the classic text-adventure into a cinematic experience, bridging the digital and physical worlds through multimodal AI vision and dynamic visual storytelling with **Gemma 4**.
+GemMaster is an immersive RPG narrative engine designed for the **Gemma 4 Challenge**. It transforms the classic text-adventure into a cinematic experience, bridging the digital and physical worlds through multimodal AI vision and dynamic visual storytelling with [**Gemma 4**](https://github.com/google/gemma_pytorch).
 
 > [!IMPORTANT]
 > **Recommended Models**: Optimized for **Gemma 4 E4B** and larger.
@@ -37,8 +37,8 @@ GemMaster treats every response as a **Game Frame**, following a strict hierarch
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Ollama** installed and running.
-- The **Gemma 4** model pulled: `ollama pull gemma4:e4b`.
+- [**Ollama**](https://github.com/ollama/ollama) installed and running.
+- The [**Gemma 4**](https://github.com/google/gemma_pytorch) model pulled: `ollama pull gemma4:e4b`.
 - **Python 3.10+**.
 
 ### Installation
